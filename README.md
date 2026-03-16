@@ -34,7 +34,7 @@ cd setup-project
 
 1. **Clone this repository**:
    ```bash
-   git clone https://github.com/your-username/setup-project.git
+   git clone https://github.com/dolal1/setup-project.git
    cd setup-project
    ```
 
@@ -303,3 +303,8 @@ MIT License - see [LICENSE](LICENSE) file for details
 ---
 
 *Maintained by the community • Built with ❤️ for developers*
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/dolal1/project-setup-scripts.svg)](https://github.com/dolal1/project-setup-scripts/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/dolal1/project-setup-scripts.svg)](https://github.com/dolal1/project-setup-scripts/issues)
+[![CI](https://github.com/dolal1/project-setup-scripts/workflows/Test%20Setup%20Scripts/badge.svg)](https://github.com/dolal1/project-setup-scripts/actions)
