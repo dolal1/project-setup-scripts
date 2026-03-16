@@ -1,0 +1,75 @@
+"""
+Development settings for {{PROJECT_NAME}} project.
+"""
+from .base import *
+
+# Debug mode
+DEBUG = True
+
+# Development database - can use SQLite for quick setup
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+# Override with PostgreSQL if desired
+if config('USE_POSTGRES', default=False, cast=bool):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='{{PROJECT_NAME}}_dev_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default='postgres'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
+
+# Development-specific apps
+INSTALLED_APPS += [
+    'debug_toolbar',
+]
+
+# Development middleware
+MIDDLEWARE += [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+]
+
+# Debug toolbar configuration
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+]
+
+# Email backend for development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Disable caching in development
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        '{{PROJECT_NAME}}': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}

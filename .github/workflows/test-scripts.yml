@@ -1,0 +1,81 @@
+name: Test Setup Scripts
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-django-typescript:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+    
+    - name: Test Django TypeScript Setup Script
+      run: |
+        cd scripts
+        # Make script executable
+        chmod +x setup_django_typescript_project.sh
+        
+        # Test script with automated inputs
+        echo -e "test-project\ntest-venv" | ./setup_django_typescript_project.sh
+        
+        # Verify project structure
+        test -d test-project
+        test -f test-project/docker-compose.yml
+        test -f test-project/README.md
+        test -d test-project/backend
+        test -d test-project/frontend
+        
+        # Test Docker build
+        cd test-project
+        docker-compose config  # Validate compose file
+        
+        echo "✅ Django TypeScript setup script test passed"
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install ShellCheck
+      run: sudo apt-get install shellcheck
+    
+    - name: Run ShellCheck on scripts
+      run: |
+        find scripts/ -name "*.sh" -exec shellcheck {} \;
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install markdownlint
+      run: npm install -g markdownlint-cli
+    
+    - name: Lint Markdown files
+      run: markdownlint "**/*.md" --ignore node_modules

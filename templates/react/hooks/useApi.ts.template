@@ -1,0 +1,117 @@
+import { useState, useEffect } from 'react';
+import axios, { AxiosResponse, AxiosError } from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+// Configure axios defaults
+axios.defaults.baseURL = API_BASE_URL;
+axios.defaults.withCredentials = true;
+
+interface ApiState<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export function useApi<T>(url: string, options?: { immediate?: boolean }) {
+  const [state, setState] = useState<ApiState<T>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const fetchData = async () => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      const response: AxiosResponse<T> = await axios.get(url);
+      setState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+    } catch (err) {
+      const error = err as AxiosError;
+      setState({
+        data: null,
+        loading: false,
+        error: error.message || 'An error occurred',
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (options?.immediate !== false) {
+      fetchData();
+    }
+  }, [url]);
+
+  return {
+    ...state,
+    refetch: fetchData,
+  };
+}
+
+export function useApiMutation<TData, TVariables = any>() {
+  const [state, setState] = useState<ApiState<TData>>({
+    data: null,
+    loading: false,
+    error: null,
+  });
+
+  const mutate = async (url: string, variables?: TVariables, method: 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'POST') => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      let response: AxiosResponse<TData>;
+      
+      switch (method) {
+        case 'POST':
+          response = await axios.post(url, variables);
+          break;
+        case 'PUT':
+          response = await axios.put(url, variables);
+          break;
+        case 'PATCH':
+          response = await axios.patch(url, variables);
+          break;
+        case 'DELETE':
+          response = await axios.delete(url);
+          break;
+      }
+      
+      setState({
+        data: response.data,
+        loading: false,
+        error: null,
+      });
+      
+      return response.data;
+    } catch (err) {
+      const error = err as AxiosError;
+      setState({
+        data: null,
+        loading: false,
+        error: error.message || 'An error occurred',
+      });
+      throw error;
+    }
+  };
+
+  return {
+    ...state,
+    mutate,
+  };
+}
+
+// Authentication helpers
+export const authApi = {
+  login: (credentials: { username: string; password: string }) =>
+    axios.post('/api/auth/login/', credentials),
+  
+  logout: () =>
+    axios.post('/api/auth/logout/'),
+  
+  getUser: () =>
+    axios.get('/api/auth/user/'),
+};

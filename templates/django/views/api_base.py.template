@@ -1,0 +1,91 @@
+"""
+Base API views for {{PROJECT_NAME}}.
+"""
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class BaseAPIView(generics.GenericAPIView):
+    """
+    Base API view with common functionality.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def handle_exception(self, exc):
+        """Custom exception handling."""
+        logger.error(f"API Error: {exc}", exc_info=True)
+        return super().handle_exception(exc)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Health check endpoint for monitoring.
+    """
+    return JsonResponse({
+        'status': 'healthy',
+        'message': 'API is running'
+    })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def api_info(request):
+    """
+    API information endpoint.
+    """
+    return JsonResponse({
+        'api_name': '{{PROJECT_NAME}} API',
+        'version': '1.0.0',
+        'documentation': '/swagger/',
+        'health_check': '/api/health/'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def user_login(request):
+    """
+    User login endpoint.
+    """
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({
+            'error': 'Username and password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    user = authenticate(username=username, password=password)
+    if user:
+        login(request, user)
+        return Response({
+            'message': 'Login successful',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        })
+    else:
+        return Response({
+            'error': 'Invalid credentials'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+def user_logout(request):
+    """
+    User logout endpoint.
+    """
+    logout(request)
+    return Response({'message': 'Logout successful'})
