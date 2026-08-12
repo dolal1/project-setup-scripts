@@ -11,7 +11,8 @@ if [ -z "$SCRIPT_NAME" ]; then
     exit 1
 fi
 
-SCRIPT_PATH="../scripts/${SCRIPT_NAME}.sh"
+TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${TESTS_DIR}/../scripts/${SCRIPT_NAME}.sh"
 TEST_PROJECT_NAME="test-${SCRIPT_NAME}-$$"
 TEST_DIR="/tmp/setup-script-tests"
 
