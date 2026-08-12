@@ -4,7 +4,7 @@ This directory contains template files used by the setup scripts to generate con
 
 ## 🏗️ Structure
 
-```
+```text
 templates/
 ├── django/                     # Django-specific templates
 │   ├── settings/

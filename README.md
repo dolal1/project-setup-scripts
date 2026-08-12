@@ -9,6 +9,7 @@ A collection of automated project setup scripts for various technology stacks.
 **File**: `scripts/setup_django_typescript_project.sh`
 
 Creates a full-stack project with:
+
 - Django REST Framework backend
 - React TypeScript frontend (Vite)
 - PostgreSQL database
@@ -24,6 +25,7 @@ cd setup-project
 ```
 
 ### 🔧 More Scripts Coming Soon
+
 - Python FastAPI + React setup
 - Node.js Express + Vue.js setup
 - Django + Next.js setup
@@ -34,17 +36,20 @@ cd setup-project
 ### Local Usage
 
 1. **Clone this repository**:
+
    ```bash
    git clone https://github.com/dolal1/setup-project.git
    cd setup-project
    ```
 
 2. **Make scripts executable**:
+
    ```bash
    chmod +x scripts/*.sh
    ```
 
 3. **Run the setup**:
+
    ```bash
    ./scripts/setup_django_typescript_project.sh
    ```
@@ -56,6 +61,7 @@ cd setup-project
 To use these scripts from anywhere on your system:
 
 #### Option 1: Add to PATH (Recommended)
+
 ```bash
 # Add scripts directory to your PATH
 echo 'export PATH="$PATH:'$(pwd)'/scripts"' >> ~/.bashrc
@@ -70,6 +76,7 @@ setup_django_typescript_project.sh
 ```
 
 #### Option 2: Symlink to /usr/local/bin
+
 ```bash
 # Make scripts executable
 chmod +x scripts/*.sh
@@ -83,6 +90,7 @@ setup_django_typescript_project.sh
 ```
 
 #### Option 3: Copy to User's Local Bin
+
 ```bash
 # Create user bin directory if it doesn't exist
 mkdir -p ~/.local/bin
@@ -103,12 +111,14 @@ setup_django_typescript_project.sh
 Different scripts may require different tools. Check the individual script documentation for specific requirements.
 
 ### Common Requirements
+
 - Git
 - Docker & Docker Compose
 - Node.js (Latest LTS)
 - Python 3.11+
 
 ### Installation Check
+
 Run this command to verify prerequisites:
 
 ```bash
@@ -118,7 +128,7 @@ Run this command to verify prerequisites:
 
 ## 🏗️ Project Structure
 
-```
+```text
 setup-project/
 ├── scripts/                    # Setup scripts
 │   ├── setup_django_typescript_project.sh
@@ -150,6 +160,7 @@ setup-project/
 7. Submit a pull request
 
 ### Script Naming Convention
+
 - Use descriptive names: `setup_<backend>_<frontend>_project.sh`
 - Include technology versions if specific
 - Add brief description at the top of each script
@@ -158,12 +169,14 @@ setup-project/
 ### Adding a New Script
 
 1. **Create the script**:
+
    ```bash
    cp scripts/setup_django_typescript_project.sh scripts/setup_your_new_script.sh
    # Modify the new script for your technology stack
    ```
 
 2. **Add tests**:
+
    ```bash
    # Test your script
    ./tests/test_script.sh setup_your_new_script
@@ -213,6 +226,7 @@ Detailed documentation for each setup script is available in the `docs/` directo
 ## 🔒 Security
 
 All scripts include security best practices:
+
 - Dependency vulnerability scanning
 - Secret detection
 - Code quality checks
@@ -299,9 +313,9 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 📊 Script Compatibility
 
-| Script | Linux | macOS | Windows (WSL2) | Docker Required |
-|--------|-------|-------|----------------|-----------------|
-| Django + TypeScript | ✅ | ✅ | ✅ | Yes |
+| Script              | Linux | macOS | Windows (WSL2) | Docker Required |
+|---------------------|-------|-------|----------------|-----------------|
+| Django + TypeScript | ✅    | ✅    | ✅             | Yes             |
 
 ---
 

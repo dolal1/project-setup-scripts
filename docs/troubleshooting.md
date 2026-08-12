@@ -17,6 +17,7 @@ bash scripts/setup_django_typescript_project.sh
 ### Missing Dependencies
 
 #### Python Not Found
+
 ```bash
 # Ubuntu/Debian
 sudo apt update
@@ -27,6 +28,7 @@ brew install python@3.11
 ```
 
 #### Node.js Not Found
+
 ```bash
 # Ubuntu/Debian
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -37,6 +39,7 @@ brew install node
 ```
 
 #### Docker Not Found
+
 ```bash
 # Ubuntu/Debian
 sudo apt update
@@ -50,6 +53,7 @@ brew install docker
 ### Git Issues
 
 #### Git Not Initialized
+
 ```bash
 cd your-project
 git init
@@ -58,6 +62,7 @@ git commit -m "Initial commit"
 ```
 
 #### Permission Issues
+
 ```bash
 # Configure git if not done
 git config --global user.name "Your Name"
@@ -131,6 +136,7 @@ docker-compose up --build
 ### Virtual Environment Issues
 
 #### Cannot Activate Virtual Environment
+
 ```bash
 # Recreate virtual environment
 rm -rf backend/*-venv
@@ -143,6 +149,7 @@ pip install -r requirements.txt
 ```
 
 #### Python Version Issues
+
 ```bash
 # Check Python version
 python3 --version
@@ -160,6 +167,7 @@ python3.11 -m venv my-project-venv
 ### Django Database Issues
 
 #### Migration Errors
+
 ```bash
 cd backend
 source *-venv/bin/activate
@@ -175,6 +183,7 @@ python manage.py migrate
 ```
 
 #### Database Connection Issues
+
 ```bash
 # Check if PostgreSQL is running
 docker-compose ps
@@ -189,6 +198,7 @@ docker-compose logs postgres
 ### Package Installation Issues
 
 #### Pip Install Failures
+
 ```bash
 # Upgrade pip first
 pip install --upgrade pip
@@ -205,6 +215,7 @@ pip cache purge
 ### NPM Installation Issues
 
 #### Permission Errors
+
 ```bash
 # Fix npm permissions (Linux/macOS)
 mkdir ~/.npm-global
@@ -219,6 +230,7 @@ nvm install node
 ```
 
 #### Package Installation Failures
+
 ```bash
 # Clear npm cache
 npm cache clean --force
@@ -234,6 +246,7 @@ npm install --registry https://registry.npmmirror.com/
 ### TypeScript Issues
 
 #### Type Errors
+
 ```bash
 # Update TypeScript
 npm install -D typescript@latest
@@ -248,6 +261,7 @@ npx tsc --noEmit
 ### Vite Issues
 
 #### Port 3000 Already in Use
+
 ```bash
 # Kill process using port 3000
 sudo lsof -i :3000
@@ -262,6 +276,7 @@ export default defineConfig({
 ```
 
 #### Build Issues
+
 ```bash
 # Clear Vite cache
 rm -rf node_modules/.vite
@@ -273,6 +288,7 @@ NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ## 🔒 Security Tool Issues
 
 ### Bandit Issues
+
 ```bash
 # Install bandit in virtual environment
 source backend/*-venv/bin/activate
@@ -283,6 +299,7 @@ bandit -r . -f json -o bandit-report.json
 ```
 
 ### Trivy Issues
+
 ```bash
 # Install trivy (Ubuntu)
 sudo apt-get install wget apt-transport-https gnupg lsb-release
@@ -296,6 +313,7 @@ brew install trivy
 ```
 
 ### TruffleHog Issues
+
 ```bash
 # Install trufflehog
 pip install trufflehog3
@@ -307,6 +325,7 @@ wget https://github.com/trufflesecurity/trufflehog/releases/latest/download/truf
 ## 🧪 Testing Issues
 
 ### Pytest Issues
+
 ```bash
 # Install pytest in virtual environment
 source backend/*-venv/bin/activate
@@ -320,6 +339,7 @@ pytest --cache-clear
 ```
 
 ### Frontend Test Issues
+
 ```bash
 # Install test dependencies
 npm install --save-dev @testing-library/react @testing-library/jest-dom vitest
@@ -334,6 +354,7 @@ rm -rf node_modules/.cache
 ## 💾 Database Issues
 
 ### PostgreSQL Connection Issues
+
 ```bash
 # Check if PostgreSQL container is running
 docker-compose ps postgres
@@ -346,6 +367,7 @@ docker-compose exec postgres psql -U postgres -d your_database_name
 ```
 
 ### Redis Connection Issues
+
 ```bash
 # Check Redis container
 docker-compose ps redis
@@ -360,6 +382,7 @@ docker-compose logs redis
 ## 🔄 Environment Issues
 
 ### Environment Variables Not Loading
+
 ```bash
 # Check .env file exists and has correct format
 cat .env
@@ -374,6 +397,7 @@ export $(cat .env | xargs)
 ```
 
 ### Path Issues
+
 ```bash
 # Check if directories exist
 ls -la backend/
@@ -386,6 +410,7 @@ chmod 755 backend/ frontend/
 ## 🚀 Performance Issues
 
 ### Slow Container Startup
+
 ```bash
 # Check system resources
 docker system df
@@ -405,6 +430,7 @@ docker volume prune -f
 See [Docker Maintenance](docker-maintenance.md) for a full space audit.
 
 ### Memory Issues
+
 ```bash
 # Increase Docker memory limit in Docker Desktop
 # Or add swap space (Linux)
@@ -417,6 +443,7 @@ sudo swapon /swapfile
 ## 📞 Getting More Help
 
 ### Debug Mode
+
 ```bash
 # Run scripts with debug mode
 bash -x scripts/setup_django_typescript_project.sh
@@ -426,6 +453,7 @@ export DEBUG=True
 ```
 
 ### Log Collection
+
 ```bash
 # Collect all logs
 docker-compose logs > docker-logs.txt
@@ -434,6 +462,7 @@ pytest > pytest-logs.txt 2>&1
 ```
 
 ### Common Log Locations
+
 - Docker logs: `docker-compose logs <service>`
 - Django logs: `backend/logs/` (if configured)
 - Node.js logs: Usually in terminal output
@@ -442,6 +471,7 @@ pytest > pytest-logs.txt 2>&1
 ### Reporting Issues
 
 When reporting issues, include:
+
 1. Operating system and version
 2. Python, Node.js, Docker versions
 3. Full error message

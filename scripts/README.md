@@ -13,6 +13,7 @@ Each script is standalone and can be run independently:
 ## 📝 Available Scripts
 
 ### Django + React TypeScript
+
 **File**: `setup_django_typescript_project.sh`
 **Description**: Full-stack web application with Django REST API and React frontend
 **Technologies**: Django, PostgreSQL, React, TypeScript, Docker, Celery, Redis
@@ -25,11 +26,13 @@ Each script is standalone and can be run independently:
 ## 🔧 Script Requirements
 
 ### All Scripts
+
 - Bash 4.0+
 - Git
 - Internet connection for downloading dependencies
 
 ### Django TypeScript Script
+
 - Python 3.11+
 - Node.js 18+
 - Docker & Docker Compose
@@ -38,6 +41,7 @@ Each script is standalone and can be run independently:
 ## 📋 Script Features
 
 All setup scripts include:
+
 - ✅ Interactive prompts for configuration
 - ✅ Dependency checking
 - ✅ Git repository initialization

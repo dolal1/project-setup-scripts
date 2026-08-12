@@ -18,12 +18,14 @@ This script creates a production-ready full-stack web application with:
 ## 📋 Prerequisites
 
 ### Required Software
+
 - **Python 3.11+**
 - **Node.js 18+** (LTS recommended)
 - **Docker** and **Docker Compose**
 - **Git**
 
 ### System Requirements
+
 - Linux, macOS, or WSL2 on Windows
 - 4GB+ RAM for containers
 - 2GB+ free disk space
@@ -31,6 +33,7 @@ This script creates a production-ready full-stack web application with:
 ### Installation Commands
 
 #### Ubuntu/Debian
+
 ```bash
 # Update package list
 sudo apt update
@@ -51,6 +54,7 @@ sudo apt install git
 ```
 
 #### macOS
+
 ```bash
 # Install Homebrew if not installed
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -71,12 +75,14 @@ cd setup-project
 ### 2. Follow Interactive Prompts
 
 The script will ask for:
+
 - **Project name**: `my-awesome-app`
 - **Virtual environment name**: `my-awesome-app-venv` (default)
 
 ### 3. Wait for Setup Completion
 
 The script will:
+
 - Create project structure
 - Initialize Git repository
 - Set up Django backend with virtual environment
@@ -87,7 +93,7 @@ The script will:
 
 ## 📁 Generated Project Structure
 
-```
+```text
 my-awesome-app/
 ├── backend/                    # Django REST API
 │   ├── core/                  # Main Django project
@@ -131,9 +137,10 @@ docker-compose up --build
 ### Accessing Services
 
 After starting containers:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **Django Admin**: http://localhost:8000/admin
+
+- **Frontend**: <http://localhost:3000>
+- **Backend API**: <http://localhost:8000>
+- **Django Admin**: <http://localhost:8000/admin>
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 
@@ -152,6 +159,7 @@ After starting containers:
 ### Manual Development Setup
 
 #### Backend Setup
+
 ```bash
 cd backend
 source my-awesome-app-venv/bin/activate  # Activate virtual env
@@ -161,6 +169,7 @@ python manage.py runserver              # Start development server
 ```
 
 #### Frontend Setup
+
 ```bash
 cd frontend
 npm install           # Install dependencies
@@ -193,6 +202,7 @@ DB_PASSWORD=postgres
 ### Django Settings
 
 Key configurations in `backend/core/settings.py`:
+
 - CORS settings for frontend communication
 - Database configuration
 - REST Framework setup
@@ -201,6 +211,7 @@ Key configurations in `backend/core/settings.py`:
 ### Frontend Configuration
 
 TypeScript and React setup in `frontend/`:
+
 - Vite for fast development builds
 - ESLint and Prettier for code quality
 - Vitest for testing
@@ -209,6 +220,7 @@ TypeScript and React setup in `frontend/`:
 ## 🧪 Testing
 
 ### Backend Testing (Django)
+
 ```bash
 cd backend
 source my-awesome-app-venv/bin/activate
@@ -218,6 +230,7 @@ pytest tests/test_api.py       # Specific test file
 ```
 
 ### Frontend Testing (React)
+
 ```bash
 cd frontend
 npm run test           # Run tests
@@ -230,19 +243,23 @@ npm run coverage       # Generate coverage report
 The setup includes multiple security scanning tools:
 
 ### Python Security (Backend)
+
 - **Bandit**: Scans for security issues in Python code
 - **Safety**: Checks for known vulnerabilities in dependencies
 - **Ruff**: Fast linter with security rules
 
 ### JavaScript Security (Frontend)
+
 - **npm audit**: Checks for vulnerable npm packages
 - **Semgrep**: Static analysis for security issues
 
 ### Container Security
+
 - **Trivy**: Scans container images and filesystems
 - **TruffleHog**: Detects secrets in code
 
 ### Running Security Scans
+
 ```bash
 ./scripts.sh security
 ```
@@ -250,17 +267,20 @@ The setup includes multiple security scanning tools:
 ## 🎨 Code Quality Tools
 
 ### Python (Backend)
+
 - **Black**: Code formatting
 - **isort**: Import sorting
 - **mypy**: Type checking
 - **Ruff**: Fast linting
 
 ### TypeScript (Frontend)
+
 - **ESLint**: Code linting
 - **Prettier**: Code formatting
 - **TypeScript**: Type checking
 
 ### Running Quality Checks
+
 ```bash
 ./scripts.sh quality
 ```
@@ -301,6 +321,7 @@ docker-compose up --build
 Before deploying to production:
 
 1. **Change secret keys**:
+
    ```bash
    # Generate new Django secret key
    python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
@@ -332,6 +353,7 @@ DB_HOST=your-production-db-host
 ### Common Issues
 
 #### Docker Permission Issues
+
 ```bash
 # Add user to docker group
 sudo usermod -aG docker $USER
@@ -339,6 +361,7 @@ sudo usermod -aG docker $USER
 ```
 
 #### Port Already in Use
+
 ```bash
 # Find process using port
 sudo lsof -i :3000
@@ -349,6 +372,7 @@ sudo kill -9 <PID>
 ```
 
 #### Virtual Environment Issues
+
 ```bash
 # Recreate virtual environment
 rm -rf backend/my-awesome-app-venv
@@ -359,6 +383,7 @@ pip install -r requirements.txt
 ```
 
 #### Database Connection Issues
+
 ```bash
 # Reset database
 docker-compose down
@@ -376,6 +401,7 @@ docker-compose up --build
 ## 📞 Support
 
 For issues with this setup script:
+
 - Create an issue in the GitHub repository
 - Check the troubleshooting guide
 - Review the generated project documentation
