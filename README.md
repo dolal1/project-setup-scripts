@@ -5,6 +5,7 @@ A collection of automated project setup scripts for various technology stacks.
 ## 📁 Available Setup Scripts
 
 ### 🐍 Django + React TypeScript
+
 **File**: `scripts/setup_django_typescript_project.sh`
 
 Creates a full-stack project with:
@@ -125,6 +126,7 @@ setup-project/
 ├── templates/                  # Template files (for future use)
 ├── docs/                       # Documentation
 │   ├── django-typescript-setup.md
+│   ├── docker-maintenance.md
 │   └── troubleshooting.md
 ├── .github/
 │   └── workflows/
@@ -205,6 +207,7 @@ rm -rf /tmp/test-setup
 Detailed documentation for each setup script is available in the `docs/` directory:
 
 - [Django + TypeScript Setup Guide](docs/django-typescript-setup.md)
+- [Docker Maintenance Guide](docs/docker-maintenance.md) — reclaiming disk space and rebuilding containers without losing your database
 - [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## 🔒 Security

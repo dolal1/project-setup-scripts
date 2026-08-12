@@ -66,6 +66,9 @@ git config --global user.email "your.email@example.com"
 
 ## 🐳 Docker Issues
 
+> 💡 For disk space cleanup, safe pruning, and rebuilding without losing your database,
+> see the [Docker Maintenance Guide](docker-maintenance.md).
+
 ### Docker Permission Denied
 
 ```bash
@@ -96,7 +99,9 @@ sudo kill -9 <PID>
 ### Container Build Failures
 
 ```bash
-# Clean Docker cache
+# Clean Docker cache: stopped containers, unused networks, all unused images,
+# and build cache. Prompts before deleting; add -f to skip the prompt.
+# Volumes are untouched unless you add --volumes — so your database survives.
 docker system prune -a
 
 # Rebuild without cache
@@ -105,6 +110,10 @@ docker-compose build --no-cache
 # Check logs for specific errors
 docker-compose logs <service-name>
 ```
+
+⚠️ Never add `--volumes` to `docker system prune`, and never run `docker volume prune -a`.
+With containers stopped, every volume looks unused — including your database and every
+other project's. See the "`LINKS 0` Trap" section of [Docker Maintenance](docker-maintenance.md).
 
 ### Volume Permission Issues
 
@@ -385,8 +394,15 @@ docker system events
 # Prune unused containers/images
 docker system prune
 
+# Reclaim orphaned anonymous volumes. Note: this compose file uses NAMED
+# volumes throughout, so expect this to reclaim little or nothing here —
+# images and build cache are where the space goes.
+docker volume prune -f
+
 # Use lighter base images in Dockerfiles
 ```
+
+See [Docker Maintenance](docker-maintenance.md) for a full space audit.
 
 ### Memory Issues
 ```bash
