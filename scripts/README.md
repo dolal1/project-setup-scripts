@@ -23,6 +23,32 @@ Each script is standalone and can be run independently:
 ./setup_django_typescript_project.sh
 ```
 
+### Laravel, tiered
+
+**File**: `setup_laravel_tiered_project.sh`
+**Description**: Laravel 12 app sold in tiers; every tier above core is a removable module, and
+`scripts/build-release.sh` builds client releases without the higher tiers
+**Technologies**: Laravel 12, Laravel Pennant, PHPUnit, GitHub Actions
+**Contract**: [docs/tiered-modules.md](../docs/tiered-modules.md)
+
+```bash
+./setup_laravel_tiered_project.sh my-app --prefix myapp --tiers basic,standard,premium
+./setup_laravel_tiered_project.sh path/to/repo --prefix myapp --into-existing
+./setup_laravel_tiered_project.sh --help
+```
+
+Set `LARAVEL_PHP_PLATFORM` (default `8.2.0`) to the lowest PHP version the client's host runs.
+
+## 🧰 Shared helpers (`common/`)
+
+Sourced by the setup scripts, never run directly:
+
+| File | Provides |
+| --- | --- |
+| `common/render.sh` | `render_template <src> <dst> KEY=VALUE...` |
+| `common/ai-guardrails.sh` | `apply_ai_guardrails`: the commit review gate every generated project gets |
+| `common/tiered.sh` | Argument parsing and prompts, prefix and tier checks, `--into-existing`, `apply_tiered_common` |
+
 ## 🔧 Script Requirements
 
 ### All Scripts
@@ -37,6 +63,11 @@ Each script is standalone and can be run independently:
 - Node.js 18+
 - Docker & Docker Compose
 - npm/yarn
+
+### Laravel Tiered Script
+
+- PHP 8.2+ (with `pdo_sqlite` to run the generated tests)
+- Composer 2
 
 ## 📋 Script Features
 
@@ -67,10 +98,18 @@ Before submitting a new script:
 
 When creating new scripts, follow this structure:
 
+Source the shared helpers and apply the AI guardrails at the end, so every generated project
+gets the commit review gate:
+
 ```bash
 #!/bin/bash
 
 set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+TEMPLATES_DIR="$SCRIPT_DIR/../templates"
+source "$SCRIPT_DIR/common/render.sh"
+source "$SCRIPT_DIR/common/ai-guardrails.sh"
 
 # Script metadata
 SCRIPT_NAME="Setup <Technology> Project"
@@ -88,6 +127,9 @@ check_dependencies() {
 # Main setup logic
 main() {
     # Your setup logic here
+
+    # Last step, unless --no-ai-guardrails was given
+    apply_ai_guardrails "$TEMPLATES_DIR" "$PWD" "$PROJECT_NAME" "- Project-specific rules for agents"
 }
 
 # Error handling

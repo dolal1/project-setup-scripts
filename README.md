@@ -1,6 +1,11 @@
 # 🚀 Project Setup Scripts Collection
 
-A collection of automated project setup scripts for various technology stacks.
+A collection of automated project setup scripts for various technology stacks. Some create a
+standard full-stack app; the **tiered** scripts create an app sold in tiers (for example Basic,
+Standard, Premium), where a client release contains only the code for the tiers that client has.
+
+Every generated project also gets an [AI agent commit review gate](#-ai-agent-commit-review-gate),
+so anyone working on it with an LLM has a human approve each commit.
 
 ## 📁 Available Setup Scripts
 
@@ -24,8 +29,35 @@ cd setup-project
 ./scripts/setup_django_typescript_project.sh
 ```
 
+### 🐘 Laravel, tiered
+
+**File**: `scripts/setup_laravel_tiered_project.sh`
+
+Creates a Laravel 12 app whose tiers above core are removable modules in `modules/<Tier>/`:
+
+- Module loader driven by one setting (`<PREFIX>_TIER`)
+- Laravel Pennant feature switches, with an artisan command to list and change them
+- Role-based permissions and a `<x-can>` Blade component that also knows which tiers are in the build
+- An arch test that stops core code from depending on a module
+- A sample module per tier, with tests that pass at every tier
+- CI that runs the suite once per tier
+- `scripts/build-release.sh`, which builds a client release without the higher tiers, checks
+  nothing leaked, runs the stripped build's tests, and outputs a fresh one-commit repo and zip
+
+```bash
+./scripts/setup_laravel_tiered_project.sh my-app --prefix myapp --tiers basic,standard,premium
+
+# Or build into an existing repo (e.g. one holding the project's planning docs), keeping its files
+./scripts/setup_laravel_tiered_project.sh path/to/repo --prefix myapp --into-existing
+```
+
+See the [Tiered Modules contract](docs/tiered-modules.md) for how the tiers, permissions and
+release build work.
+
 ### 🔧 More Scripts Coming Soon
 
+- Django, tiered (server-rendered, same tier contract)
+- Node.js Express + TypeScript, tiered (same tier contract)
 - Python FastAPI + React setup
 - Node.js Express + Vue.js setup
 - Django + Next.js setup
@@ -89,14 +121,14 @@ sudo ln -s $(pwd)/scripts/setup_*.sh /usr/local/bin/
 setup_django_typescript_project.sh
 ```
 
-#### Option 3: Copy to User's Local Bin
+#### Option 3: Symlink into User's Local Bin
 
 ```bash
 # Create user bin directory if it doesn't exist
 mkdir -p ~/.local/bin
 
-# Copy scripts
-cp scripts/*.sh ~/.local/bin/
+# Link (don't copy) the scripts
+ln -s "$(pwd)"/scripts/setup_*.sh ~/.local/bin/
 
 # Ensure ~/.local/bin is in PATH (add to ~/.bashrc if needed)
 echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
@@ -106,16 +138,20 @@ source ~/.bashrc
 setup_django_typescript_project.sh
 ```
 
+> **Link, don't copy.** The scripts load `scripts/common/` and `templates/` from this
+> repository. They follow symlinks to find them, but a copied script can't.
+
 ## 📋 Prerequisites
 
 Different scripts may require different tools. Check the individual script documentation for specific requirements.
 
 ### Common Requirements
 
-- Git
-- Docker & Docker Compose
-- Node.js (Latest LTS)
-- Python 3.11+
+- Git, Bash 4+
+- Docker & Docker Compose (Django + TypeScript)
+- Node.js (Latest LTS) (Django + TypeScript)
+- Python 3.11+ (Django + TypeScript)
+- PHP 8.2+ with `pdo_sqlite`, and Composer (Laravel tiered; the generated tests run on SQLite)
 
 ### Installation Check
 
@@ -132,10 +168,17 @@ Run this command to verify prerequisites:
 setup-project/
 ├── scripts/                    # Setup scripts
 │   ├── setup_django_typescript_project.sh
+│   ├── setup_laravel_tiered_project.sh
+│   ├── common/                 # Shared helpers: templating, AI guardrails, tier handling
+│   ├── propose-commit.sh       # This repo's own commit review helper
 │   └── README.md
-├── templates/                  # Template files (for future use)
+├── templates/                  # Files the scripts render into new projects
+│   ├── ai-agents/              # AGENTS.md, CLAUDE.md, .claude/settings.json, propose-commit.sh
+│   ├── tiered-common/          # build-release.sh and release.exclude, for every tiered stack
+│   └── laravel-tiered/         # Laravel tiered app and sample module
 ├── docs/                       # Documentation
 │   ├── django-typescript-setup.md
+│   ├── tiered-modules.md
 │   ├── docker-maintenance.md
 │   └── troubleshooting.md
 ├── .github/
@@ -143,7 +186,11 @@ setup-project/
 │       └── test-scripts.yml    # CI/CD testing
 ├── tests/                      # Script tests
 │   ├── test_script.sh
-│   └── run_all_tests.sh
+│   ├── test_all_script.sh
+│   ├── test_ai_guardrails.sh
+│   └── test_tiered_common.sh
+├── AGENTS.md                   # Rules for AI agents working on this repo
+├── CLAUDE.md
 ├── LICENSE
 ├── .gitignore
 └── README.md
@@ -193,10 +240,15 @@ Run the test suite to verify scripts work correctly:
 
 ```bash
 # Test all scripts
-./tests/run_all_tests.sh
+./tests/test_all_script.sh
 
 # Test specific script
 ./tests/test_script.sh setup_django_typescript_project
+./tests/test_script.sh setup_laravel_tiered_project
+
+# Fast checks of the shared helpers (no installs, a few seconds)
+./tests/test_ai_guardrails.sh
+./tests/test_tiered_common.sh
 ```
 
 ### Manual Testing
@@ -220,6 +272,7 @@ rm -rf /tmp/test-setup
 Detailed documentation for each setup script is available in the `docs/` directory:
 
 - [Django + TypeScript Setup Guide](docs/django-typescript-setup.md)
+- [Tiered Modules contract](docs/tiered-modules.md) — how tiered apps load modules, check permissions and build client releases
 - [Docker Maintenance Guide](docs/docker-maintenance.md) — reclaiming disk space and rebuilding containers without losing your database
 - [Troubleshooting Guide](docs/troubleshooting.md)
 
@@ -232,6 +285,20 @@ All scripts include security best practices:
 - Code quality checks
 - Container security scanning
 - No hardcoded secrets or credentials
+
+## 🤖 AI Agent Commit Review Gate
+
+Every setup script adds these files to the project it creates (skip them with
+`--no-ai-guardrails`):
+
+| File | What it does |
+| --- | --- |
+| `AGENTS.md` | Rules any coding agent reads: before committing, show `git status`, the diff summary and the exact message, then wait for a human to approve. Never push, add remotes or create repos without approval |
+| `CLAUDE.md` | Points Claude Code at `AGENTS.md` |
+| `.claude/settings.json` | Makes Claude Code stop and ask before `git commit`, `git push`, `git remote add`, `git reset --hard`, `gh repo create/fork` and release builds |
+| `scripts/propose-commit.sh` | Shows what's staged and the proposed message, then asks `Commit? [y/N/e/d]`. It reads the answer from the terminal, so an agent can't approve its own commit by piping in "y" |
+
+This repository uses the same gate for its own development.
 
 ## 🚀 Usage Examples
 
@@ -316,6 +383,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 | Script              | Linux | macOS | Windows (WSL2) | Docker Required |
 |---------------------|-------|-------|----------------|-----------------|
 | Django + TypeScript | ✅    | ✅    | ✅             | Yes             |
+| Laravel, tiered     | ✅    | ✅    | ✅             | No              |
 
 ---
 
