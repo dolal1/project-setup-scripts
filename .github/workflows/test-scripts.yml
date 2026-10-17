@@ -85,6 +85,20 @@ jobs:
     - name: Test Laravel tiered setup script (every tier + release builds)
       run: ./tests/test_script.sh setup_laravel_tiered_project
 
+  test-django-tiered:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Test Django tiered setup script (every tier + release builds)
+      run: ./tests/test_script.sh setup_django_tiered_project
+
   shellcheck:
     runs-on: ubuntu-latest
     

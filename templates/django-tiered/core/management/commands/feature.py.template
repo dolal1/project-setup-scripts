@@ -1,0 +1,31 @@
+from django.core.management.base import BaseCommand, CommandError
+
+from core import features
+
+
+class Command(BaseCommand):
+    help = "List feature switches, or switch one on, off, or back to its default"
+
+    def add_arguments(self, parser):
+        parser.add_argument("name", nargs="?", help="The feature to change; omit to list every feature")
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--on", action="store_true", help="Switch the feature on")
+        group.add_argument("--off", action="store_true", help="Switch the feature off")
+        group.add_argument("--reset", action="store_true", help="Return the feature to its default")
+
+    def handle(self, *args, name=None, on=False, off=False, reset=False, **options):
+        if name is None:
+            for feature in features.defined():
+                self.stdout.write(f"{feature}\t{'on' if features.is_active(feature) else 'off'}")
+            return
+
+        if name not in features.defined():
+            raise CommandError(f"'{name}' is not a feature in this build.")
+        if not (on or off or reset):
+            raise CommandError("Choose one of --on, --off or --reset.")
+
+        if reset:
+            features.reset(name)
+        else:
+            features.set_active(name, on)
+        self.stdout.write(f"{name}: {'on' if features.is_active(name) else 'off'}")

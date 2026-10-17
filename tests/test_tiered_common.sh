@@ -74,7 +74,12 @@ printf 'framework docs\n' > "$built/docs/00-plan.md"
 printf 'new\n' > "$built/docs/framework.md"
 printf 'code\n' > "$built/app/core.txt"
 printf '.env\n/vendor/\n' > "$built/.gitignore"
+printf '# Planning\n\n## Project rules\n\n- Planning rule\n' > "$existing/AGENTS.md"
+printf '# App\n\n## Commit review gate\n\n- gate\n\n## Project rules\n\n- App rule\n' > "$built/AGENTS.md"
 move_into_existing "$built" "$existing" 2> /dev/null
+grep -q -- '- Planning rule' "$existing/AGENTS.md" && grep -q '^## App rules$' "$existing/AGENTS.md" \
+    && grep -q -- '- App rule' "$existing/AGENTS.md" || fail "AGENTS.md rules not merged"
+[ "$(grep -c '^## Commit review gate$' "$existing/AGENTS.md")" = 0 ] || fail "AGENTS.md merge duplicated the gate section"
 grep -q 'Client README' "$existing/README.md" || fail "existing README was overwritten"
 grep -q '^plan$' "$existing/docs/00-plan.md" || fail "existing doc was overwritten"
 [ -f "$existing/docs/framework.md" ] && [ -f "$existing/app/core.txt" ] || fail "new files not moved in"

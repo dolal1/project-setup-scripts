@@ -1,0 +1,15 @@
+from core.permissions import Role, TierPermission
+
+
+class Permission(TierPermission):
+    """Permissions the {{MODULE}} tier adds. They don't exist in a build without this module,
+    so every check for them denies there.
+    """
+
+    VIEW_EXAMPLE = "{{MODULE_TIER}}.example.view"
+
+    def roles(self) -> list[Role]:
+        return {Permission.VIEW_EXAMPLE: [Role.ADMIN]}[self]
+
+    def feature(self) -> str | None:
+        return {Permission.VIEW_EXAMPLE: "{{MODULE_TIER}}.example"}[self]

@@ -1,0 +1,29 @@
+import re
+
+from django.apps import apps
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+from core.permissions import Role, lookup
+
+MODEL_PERMISSION = re.compile(r"^(add|change|delete|view)_\w+$")
+
+
+class User(AbstractUser):
+    role = models.CharField(max_length=32, choices=Role.choices, default=Role.STAFF)
+
+    def has_perm(self, perm, obj=None):
+        """Tier permissions follow feature + role, even for superusers.
+
+        Django lets a superuser pass every check, which would let them see features of tiers
+        that aren't in this build. So: a registered tier permission decides for itself; Django's
+        own model permissions ("core.change_user", used by the admin) work as normal; anything
+        else (e.g. a permission from a tier missing here) denies.
+        """
+        tier_permission = lookup(perm)
+        if tier_permission is not None:
+            return tier_permission.allows(self)
+        app_label, _, codename = perm.partition(".")
+        if MODEL_PERMISSION.match(codename) and app_label in {c.label for c in apps.get_app_configs()}:
+            return super().has_perm(perm, obj)
+        return False

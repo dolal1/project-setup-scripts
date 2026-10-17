@@ -1,0 +1,49 @@
+# {{PROJECT_NAME}}
+
+Django 5.2 app sold in tiers: {{TIERS_LABEL}}. Core ({{CORE_TIER_LABEL}}) lives in `core/`; each
+higher tier is a Django app in `modules/<tier>/`. A client release contains only the tiers that
+client has, because `scripts/build-release.sh` removes the rest from the code.
+
+## Getting started
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements-dev.txt
+cp .env.example .env
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+## Tiers
+
+- `{{PREFIX_UPPER}}_TIER` in `.env` picks the active tier. Development defaults to `{{TOP_TIER}}`.
+- `python manage.py {{PREFIX}}_feature` lists feature switches; add a name and `--on`, `--off` or
+  `--reset` to change one. Switches also appear in the admin (django-waffle).
+- In templates: `{% load tiers %}`, then `{% can "perm" %}...{% else %}...{% endcan %}` and
+  `{% menu "main" %}`. In views: `@permission_required("perm", raise_exception=True)`.
+- Core never imports from `modules`. `core/tests/test_arch.py` enforces it.
+
+Run the suite at every tier before committing:
+
+```bash
+for tier in {{TIERS_SPACED}}; do {{PREFIX_UPPER}}_TIER=$tier pytest -q || break; done
+```
+
+After changing a module's models, run `makemigrations` with the top tier active so every app is
+installed: `{{PREFIX_UPPER}}_TIER={{TOP_TIER}} python manage.py makemigrations`.
+
+## Releases
+
+```bash
+scripts/build-release.sh <tier> <version>    # e.g. scripts/build-release.sh {{CORE_TIER}} 1.0.0
+```
+
+The script writes a fresh one-commit repo and a zip to `../<project>-releases/` and prints the
+SHA-256. The client installs `requirements.txt` on their host. Paths that never ship are listed in
+`release.exclude`.
+
+## AI agents
+
+`AGENTS.md` has the rules for coding agents, including the commit review gate. A human approves
+every commit; `scripts/propose-commit.sh` asks for that approval on the terminal.

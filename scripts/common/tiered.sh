@@ -190,6 +190,16 @@ move_into_existing() {
         merge_gitignore "$built/.gitignore" "$target/.gitignore"
         rm -f "$built/.gitignore"
     fi
+    # An existing AGENTS.md (e.g. a planning repo's) keeps its rules and gains the app's rules
+    if [[ -f "$built/AGENTS.md" && -f "$target/AGENTS.md" ]]; then
+        if ! grep -q '^## App rules$' "$target/AGENTS.md"; then
+            {
+                printf '\n## App rules\n\nAdded by %s when the app was generated into this repo.\n' "$(basename "$0")"
+                sed -n '/^## Project rules$/,$p' "$built/AGENTS.md" | tail -n +2
+            } >> "$target/AGENTS.md"
+        fi
+        rm -f "$built/AGENTS.md"
+    fi
     rm -rf "$built/.git"
     shopt -s dotglob
     for entry in "$built"/*; do

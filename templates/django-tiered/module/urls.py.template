@@ -1,0 +1,10 @@
+from django.urls import path
+
+from . import views
+
+# Mounted at /{{MODULE_TIER}}/ only when this module loads, so in a lower-tier build these URLs 404.
+app_name = "{{MODULE_TIER}}"
+
+urlpatterns = [
+    path("example/", views.example, name="example"),
+]

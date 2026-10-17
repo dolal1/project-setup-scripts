@@ -1,0 +1,30 @@
+"""Core must never reference a tier module. If it did, a release without that module would break
+at the client's site. Modules plug into core through hooks (core.menu, core.permissions, ...).
+"""
+import re
+from pathlib import Path
+
+from django.conf import settings
+
+ROOT = Path(__file__).resolve().parents[2]
+CORE_PATHS = ["config", "core", "templates"]
+
+
+def test_core_never_references_modules():
+    # An import of the modules package, a tier module's dotted path, URL namespace or template folder
+    patterns = [re.compile(r"^\s*(from|import)\s+modules\b", re.MULTILINE)]
+    for tier in settings.TIERS[1:]:
+        patterns.append(re.compile(rf"\bmodules\.{re.escape(tier)}\b"))
+        patterns.append(re.compile(rf"""['"]{re.escape(tier)}[:/]"""))
+
+    violations = []
+    for base in CORE_PATHS:
+        for path in sorted((ROOT / base).rglob("*")):
+            if path.suffix not in {".py", ".html", ".txt"} or path == Path(__file__) or "__pycache__" in path.parts:
+                continue
+            text = path.read_text()
+            for pattern in patterns:
+                if pattern.search(text):
+                    violations.append(f"{path.relative_to(ROOT)} matches {pattern.pattern}")
+
+    assert violations == [], "Core references tier modules:\n" + "\n".join(violations)

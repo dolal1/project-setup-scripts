@@ -1,0 +1,83 @@
+"""Template tags for tier-aware views.
+
+    {% load tiers %}
+    {% can "users.manage" %}...{% endcan %}
+    {% can "reports.view" "reports.export" any %}...{% endcan %}
+    {% can feature="appointments" %}...{% else %}Not switched on{% endcan %}
+    {% can "stock.adjust" upgrade="Premium" %}...{% endcan %}
+    {% menu "main" %}
+
+With upgrade="Tier", a denied check shows a muted "Available in Tier" hint instead of nothing.
+Permissions and features of modules missing from the build are simply denied.
+"""
+from django import template
+from django.urls import reverse
+from django.utils.html import format_html, format_html_join
+
+from core import features
+from core.menu import menu as menu_registry
+
+register = template.Library()
+
+
+class CanNode(template.Node):
+    def __init__(self, permissions, any_, feature, upgrade, nodelist, nodelist_else):
+        self.permissions = permissions
+        self.any = any_
+        self.feature = feature
+        self.upgrade = upgrade
+        self.nodelist = nodelist
+        self.nodelist_else = nodelist_else
+
+    def passes(self, context) -> bool:
+        if self.feature is not None and not features.is_active(self.feature.resolve(context)):
+            return False
+        if not self.permissions:
+            return True
+        user = context.get("user")
+        if user is None:
+            return False
+        names = [p.resolve(context) for p in self.permissions]
+        check = any if self.any else all
+        return check(user.has_perm(name) for name in names)
+
+    def render(self, context):
+        if self.passes(context):
+            return self.nodelist.render(context)
+        if self.nodelist_else is not None:
+            return self.nodelist_else.render(context)
+        if self.upgrade is not None:
+            return format_html('<span class="upgrade-hint">Available in {}</span>', self.upgrade.resolve(context))
+        return ""
+
+
+@register.tag("can")
+def do_can(parser, token):
+    permissions, any_, feature, upgrade = [], False, None, None
+    for bit in token.split_contents()[1:]:
+        if bit == "any":
+            any_ = True
+        elif bit.startswith("feature="):
+            feature = parser.compile_filter(bit.removeprefix("feature="))
+        elif bit.startswith("upgrade="):
+            upgrade = parser.compile_filter(bit.removeprefix("upgrade="))
+        else:
+            permissions.append(parser.compile_filter(bit))
+
+    nodelist = parser.parse(("else", "endcan"))
+    nodelist_else = None
+    if parser.next_token().contents == "else":
+        nodelist_else = parser.parse(("endcan",))
+        parser.delete_first_token()
+    return CanNode(permissions, any_, feature, upgrade, nodelist, nodelist_else)
+
+
+@register.simple_tag(takes_context=True)
+def menu(context, section="main"):
+    """The menu items registered for a section that the current user may see."""
+    user = context.get("user")
+    items = menu_registry.visible(section, user) if user is not None else []
+    if not items:
+        return ""
+    links = format_html_join("", '<li><a href="{}">{}</a></li>', ((reverse(i.url_name), i.label) for i in items))
+    return format_html('<nav class="menu menu-{}"><ul>{}</ul></nav>', section, links)

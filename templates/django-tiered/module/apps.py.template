@@ -1,0 +1,23 @@
+from django.apps import AppConfig
+
+
+class {{MODULE}}Config(AppConfig):
+    """Everything the {{MODULE}} tier adds is wired here or lives in this folder, so deleting
+    modules/{{MODULE_TIER}}/ removes all of it: URLs, templates, tables, switches, permissions, menu items.
+    """
+
+    name = "modules.{{MODULE_TIER}}"
+    label = "{{MODULE_TIER}}"
+    verbose_name = "{{MODULE}} tier"
+
+    def ready(self):
+        from core import features
+        from core.menu import menu
+        from core.permissions import register
+
+        from .permissions import Permission
+
+        # On by default. `python manage.py {{PREFIX}}_feature {{MODULE_TIER}}.example --off` hides it for a while.
+        features.define("{{MODULE_TIER}}.example")
+        register(Permission)
+        menu.add("main", "{{MODULE}} example", "{{MODULE_TIER}}:example", Permission.VIEW_EXAMPLE.value, order={{MODULE_ORDER}})

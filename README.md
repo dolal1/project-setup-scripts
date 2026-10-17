@@ -54,9 +54,28 @@ Creates a Laravel 12 app whose tiers above core are removable modules in `module
 See the [Tiered Modules contract](docs/tiered-modules.md) for how the tiers, permissions and
 release build work.
 
+### 🐍 Django, tiered
+
+**File**: `scripts/setup_django_tiered_project.sh`
+
+The same tier contract as the Laravel script, for a server-rendered Django 5.2 app:
+
+- Each tier above core is a Django app in `modules/<tier>/`, added to `INSTALLED_APPS` and the URLs
+  only when it's at or below `<PREFIX>_TIER` and present on disk
+- Feature switches (stored as django-waffle switches, so they show in the admin) and a
+  `<prefix>_feature` management command
+- `Role` and `Permission` enums checked by `User.has_perm`, which also stops superusers passing
+  checks for tiers that aren't in the build; a `{% can %}` template tag and `{% menu %}`
+- Migrations generated per module, an arch test, sample modules with tests at every tier, a CI tier
+  matrix, and the same `scripts/build-release.sh`
+
+```bash
+./scripts/setup_django_tiered_project.sh my-app --prefix myapp --tiers basic,standard,premium
+./scripts/setup_django_tiered_project.sh path/to/repo --prefix myapp --into-existing
+```
+
 ### 🔧 More Scripts Coming Soon
 
-- Django, tiered (server-rendered, same tier contract)
 - Node.js Express + TypeScript, tiered (same tier contract)
 - Python FastAPI + React setup
 - Node.js Express + Vue.js setup
@@ -152,6 +171,7 @@ Different scripts may require different tools. Check the individual script docum
 - Node.js (Latest LTS) (Django + TypeScript)
 - Python 3.11+ (Django + TypeScript)
 - PHP 8.2+ with `pdo_sqlite`, and Composer (Laravel tiered; the generated tests run on SQLite)
+- Python 3.10+ with `venv` (Django tiered)
 
 ### Installation Check
 
@@ -169,13 +189,15 @@ setup-project/
 ├── scripts/                    # Setup scripts
 │   ├── setup_django_typescript_project.sh
 │   ├── setup_laravel_tiered_project.sh
+│   ├── setup_django_tiered_project.sh
 │   ├── common/                 # Shared helpers: templating, AI guardrails, tier handling
 │   ├── propose-commit.sh       # This repo's own commit review helper
 │   └── README.md
 ├── templates/                  # Files the scripts render into new projects
 │   ├── ai-agents/              # AGENTS.md, CLAUDE.md, .claude/settings.json, propose-commit.sh
 │   ├── tiered-common/          # build-release.sh and release.exclude, for every tiered stack
-│   └── laravel-tiered/         # Laravel tiered app and sample module
+│   ├── laravel-tiered/         # Laravel tiered app and sample module
+│   └── django-tiered/          # Django tiered app and sample module
 ├── docs/                       # Documentation
 │   ├── django-typescript-setup.md
 │   ├── tiered-modules.md
@@ -245,6 +267,7 @@ Run the test suite to verify scripts work correctly:
 # Test specific script
 ./tests/test_script.sh setup_django_typescript_project
 ./tests/test_script.sh setup_laravel_tiered_project
+./tests/test_script.sh setup_django_tiered_project
 
 # Fast checks of the shared helpers (no installs, a few seconds)
 ./tests/test_ai_guardrails.sh
@@ -384,6 +407,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 |---------------------|-------|-------|----------------|-----------------|
 | Django + TypeScript | ✅    | ✅    | ✅             | Yes             |
 | Laravel, tiered     | ✅    | ✅    | ✅             | No              |
+| Django, tiered      | ✅    | ✅    | ✅             | No              |
 
 ---
 

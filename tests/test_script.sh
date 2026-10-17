@@ -38,7 +38,7 @@ print_warning() {
 cleanup() {
     if [ -d "$TEST_DIR/$TEST_PROJECT_NAME" ]; then
         echo "Cleaning up test project..."
-        rm -rf "$TEST_DIR/$TEST_PROJECT_NAME"
+        rm -rf "${TEST_DIR:?}/${TEST_PROJECT_NAME:?}"
     fi
 }
 
@@ -210,6 +210,7 @@ case "$SCRIPT_NAME" in
                 print_error "Basic release still contains a higher tier or internal files"
                 exit 1
             fi
+            # shellcheck disable=SC1003  # the backslashes are a regex for Modules\Standard\
             if grep -rIlE --exclude-dir=vendor 'Modules\\(Standard|Premium)\\' "$release"; then
                 print_error "Basic release still references Standard or Premium code"
                 exit 1
@@ -219,6 +220,54 @@ case "$SCRIPT_NAME" in
         fi
 
         print_success "All Laravel tiered checks passed"
+        ;;
+    "setup_django_tiered_project")
+        echo "Running Django tiered specific checks..."
+
+        for f in manage.py config/settings.py core/modules.py core/templatetags/tiers.py \
+            core/management/commands/demo_feature.py core/migrations/0001_initial.py \
+            modules/standard/module.py modules/standard/migrations/0001_initial.py \
+            modules/premium/module.py core/tests/test_arch.py \
+            scripts/build-release.sh scripts/release-stack.sh release.exclude .github/workflows/ci.yml; do
+            if [ ! -f "$f" ]; then
+                print_error "Expected file not found: $f"
+                exit 1
+            fi
+        done
+        if grep -rqE '\{\{[A-Z_]+\}\}' config core modules templates .github AGENTS.md .env.example; then
+            print_error "Unfilled {{PLACEHOLDER}} left in generated files"
+            exit 1
+        fi
+        print_success "Tier modules, template tags, migrations and release tooling generated"
+
+        .venv/bin/python manage.py check
+        .venv/bin/python manage.py makemigrations --check --dry-run
+        for tier in basic standard premium; do
+            DEMO_TIER=$tier .venv/bin/pytest -q
+        done
+        print_success "Test suite passes at every tier"
+
+        export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+        export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+        git add -A
+        git commit -qm "test fixture"
+        for tier in basic standard; do
+            RELEASE_OUT="$TEST_DIR/releases-$$" scripts/build-release.sh "$tier" 1.0.0
+            unzip -q -o "$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-$tier.zip" -d "$TEST_DIR/releases-$$"
+        done
+        release="$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-basic"
+        if [ -e "$release/modules/standard" ] || [ -e "$release/AGENTS.md" ] || [ -e "$release/.venv" ]; then
+            print_error "Basic release still contains a higher tier or internal files"
+            exit 1
+        fi
+        if grep -rlE 'modules\.(standard|premium)\b' "$release" --exclude-dir=.git; then
+            print_error "Basic release still references Standard or Premium code"
+            exit 1
+        fi
+        rm -rf "$TEST_DIR/releases-$$"
+        print_success "Lower-tier releases build, pass their own tests and contain no higher tier"
+
+        print_success "All Django tiered checks passed"
         ;;
     *)
         print_warning "No specific tests for script: $SCRIPT_NAME"

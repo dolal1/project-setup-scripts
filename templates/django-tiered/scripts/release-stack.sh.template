@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Django hooks for scripts/build-release.sh, which sources this file.
+# Contract: docs/tiered-modules.md in project-setup-scripts.
+
+# modules/standard for tier "standard"
+stack_module_dir() {
+    printf 'modules/%s\n' "$1"
+}
+
+# Patterns that must not appear once a module is gone: its Python package, URL namespace and
+# template folder
+stack_leak_patterns() {
+    printf '%s\n' "modules\\.$1\\b" "['\"]$1[:/]"
+}
+
+stack_install_dev() {
+    python3 -m venv .venv
+    .venv/bin/pip install --quiet --disable-pip-version-check -r requirements-dev.txt
+}
+
+stack_test() {
+    .venv/bin/pytest -q
+}
+
+# The client installs dependencies from requirements.txt on their host, so nothing built here ships
+stack_install_prod() {
+    rm -rf .venv .pytest_cache db.sqlite3
+    find . -name __pycache__ -type d -prune -exec rm -rf {} +
+}

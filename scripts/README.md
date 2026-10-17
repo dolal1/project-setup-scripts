@@ -39,6 +39,21 @@ Each script is standalone and can be run independently:
 
 Set `LARAVEL_PHP_PLATFORM` (default `8.2.0`) to the lowest PHP version the client's host runs.
 
+### Django, tiered
+
+**File**: `setup_django_tiered_project.sh`
+**Description**: Django 5.2 app sold in tiers; every tier above core is a removable Django app in
+`modules/<tier>/`, and `scripts/build-release.sh` builds client releases without the higher tiers
+**Technologies**: Django 5.2 LTS, django-waffle, pytest-django, GitHub Actions
+**Contract**: [docs/tiered-modules.md](../docs/tiered-modules.md)
+
+```bash
+./setup_django_tiered_project.sh my-app --prefix myapp --tiers basic,standard,premium
+./setup_django_tiered_project.sh path/to/repo --prefix myapp --into-existing
+```
+
+Set `DJANGO_PYTHON_VERSION` (default `3.12`) for the Python version the generated CI uses.
+
 ## 🧰 Shared helpers (`common/`)
 
 Sourced by the setup scripts, never run directly:
@@ -63,6 +78,10 @@ Sourced by the setup scripts, never run directly:
 - Node.js 18+
 - Docker & Docker Compose
 - npm/yarn
+
+### Django Tiered Script
+
+- Python 3.10+ with the `venv` and `sqlite3` modules
 
 ### Laravel Tiered Script
 

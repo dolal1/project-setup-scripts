@@ -1,0 +1,48 @@
+import pytest
+from django.core.management import CommandError, call_command
+from django.template import Context, Template
+
+from core.permissions import Role
+
+pytestmark = pytest.mark.django_db
+
+
+def make_user(django_user_model, role, **extra):
+    return django_user_model.objects.create_user(username=f"{role}-{len(extra)}", password="x" * 12, role=role, **extra)
+
+
+def render(source, user):
+    return Template("{% load tiers %}" + source).render(Context({"user": user})).strip()
+
+
+def test_permissions_follow_the_roles_each_one_lists(django_user_model):
+    admin = make_user(django_user_model, Role.ADMIN)
+    staff = make_user(django_user_model, Role.STAFF)
+
+    assert admin.has_perm("users.manage")
+    assert not staff.has_perm("users.manage")
+    assert staff.has_perm("dashboard.view")
+
+
+def test_an_unknown_permission_denies_even_a_superuser(django_user_model):
+    superuser = make_user(django_user_model, Role.ADMIN, is_superuser=True)
+
+    assert not superuser.has_perm("not-in-this-build.do")
+    # Django's own model permissions still work, so the admin site does
+    assert superuser.has_perm("core.change_user")
+
+
+def test_can_tag_shows_content_else_or_upgrade_hint(django_user_model):
+    staff = make_user(django_user_model, Role.STAFF)
+
+    assert render('{% can "dashboard.view" %}yes{% endcan %}', staff) == "yes"
+    assert render('{% can "users.manage" %}yes{% endcan %}', staff) == ""
+    assert render('{% can "users.manage" %}yes{% else %}no{% endcan %}', staff) == "no"
+    assert "Available in Gold" in render('{% can "not-in-this-build.do" upgrade="Gold" %}yes{% endcan %}', staff)
+    assert render('{% can "users.manage" "dashboard.view" any %}yes{% endcan %}', staff) == "yes"
+    assert render('{% can feature="not-in-this-build" %}yes{% endcan %}', staff) == ""
+
+
+def test_feature_command_refuses_features_outside_the_build():
+    with pytest.raises(CommandError, match="not a feature in this build"):
+        call_command("{{PREFIX}}_feature", "not-in-this-build", "--on")

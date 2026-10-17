@@ -1,0 +1,16 @@
+import logging
+
+from django.apps import AppConfig
+from django.conf import settings
+
+
+class CoreConfig(AppConfig):
+    name = "core"
+    verbose_name = "{{CORE_TIER_LABEL}} (core)"
+
+    def ready(self):
+        from core.permissions import Permission, register
+
+        register(Permission)
+        for warning in settings.TIER_MODULES.warnings:
+            logging.getLogger("core.modules").warning(warning)

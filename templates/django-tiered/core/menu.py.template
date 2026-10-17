@@ -1,0 +1,31 @@
+"""Navigation registry. Modules add their own items from AppConfig.ready(), so core never needs
+to know which modules exist. Render a section with {% load tiers %}{% menu "main" %}.
+"""
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class MenuItem:
+    label: str
+    url_name: str
+    permission: str | None = None
+    order: int = 100
+
+
+class Menu:
+    def __init__(self):
+        self._items: dict[str, list[MenuItem]] = {}
+
+    def add(self, section: str, label: str, url_name: str, permission: str | None = None, order: int = 100) -> None:
+        items = self._items.setdefault(section, [])
+        item = MenuItem(label, url_name, permission, order)
+        if item not in items:
+            items.append(item)
+
+    def visible(self, section: str, user) -> list[MenuItem]:
+        items = self._items.get(section, [])
+        allowed = [i for i in items if i.permission is None or user.has_perm(i.permission)]
+        return sorted(allowed, key=lambda i: i.order)
+
+
+menu = Menu()

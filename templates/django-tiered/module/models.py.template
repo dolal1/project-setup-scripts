@@ -1,0 +1,10 @@
+from django.db import models
+
+
+class Example(models.Model):
+    """Placeholder table. Its migration only runs when the {{MODULE}} module loads, so a
+    lower-tier client's database never has it. Replace it with the tier's real models.
+    """
+
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
