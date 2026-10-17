@@ -2,7 +2,38 @@
 
 This directory contains template files used by the setup scripts to generate consistent project structures.
 
-## 🏗️ Structure
+## 🧩 Templates in use
+
+These are rendered by `render_template` in `scripts/common/render.sh`, which replaces every
+`{{KEY}}` with its value. Values may contain any characters, including `&`, `/` and newlines.
+
+```text
+templates/
+├── ai-agents/                  # Commit review gate, added to every generated project
+│   ├── AGENTS.md.template      # {{PROJECT_NAME}}, {{PROJECT_RULES}}
+│   ├── CLAUDE.md.template
+│   ├── claude-settings.json.template
+│   └── propose-commit.sh.template
+├── tiered-common/              # Shared by every tiered stack
+│   ├── build-release.sh.template   # {{PROJECT_NAME}}, {{PREFIX_UPPER}}, {{TIERS}}
+│   └── release.exclude.template
+└── laravel-tiered/             # setup_laravel_tiered_project.sh
+    ├── app/ config/ database/ resources/ tests/   # core loader, permissions, components, tests
+    ├── module/                 # rendered once per tier above core into modules/<Tier>/
+    ├── github/workflows/ci.yml.template            # becomes .github/workflows/ci.yml
+    ├── scripts/release-stack.sh.template           # Laravel hooks for build-release.sh
+    └── README.md.template
+```
+
+Laravel tiered placeholders: `{{PREFIX}}`, `{{PREFIX_UPPER}}`, `{{CORE_TIER}}`, `{{TOP_TIER}}`,
+`{{TIERS_PHP}}`, `{{TIERS_JSON}}`, `{{LOWER_TIERS_JSON}}`, and per module `{{MODULE}}`,
+`{{MODULE_TIER}}`, `{{MODULE_REQUIRES_PHP}}`, `{{MODULE_ORDER}}`. GitHub Actions expressions such
+as `${{ matrix.tier }}` are left alone, because only the listed keys are replaced.
+
+## 🏗️ Structure of the earlier templates
+
+The Django + TypeScript script still writes most of its files inline; the templates below are
+kept for moving it onto `render_template` later.
 
 ```text
 templates/

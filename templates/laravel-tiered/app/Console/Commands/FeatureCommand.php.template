@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Laravel\Pennant\Feature;
+
+/**
+ * Lists the feature switches in this build, or turns one on, off, or back to its default.
+ * Switches only exist for features the build contains; they never unlock a missing tier.
+ */
+class FeatureCommand extends Command
+{
+    protected $signature = '{{PREFIX}}:feature
+        {name? : The feature to change; omit to list every feature}
+        {--on : Switch the feature on}
+        {--off : Switch the feature off}
+        {--reset : Return the feature to its default}';
+
+    protected $description = 'List feature switches, or switch one on, off, or back to its default';
+
+    public function handle(): int
+    {
+        $defined = Feature::defined();
+        sort($defined);
+        $name = $this->argument('name');
+
+        if ($name === null) {
+            $this->table(['Feature', 'State'], array_map(
+                fn (string $feature): array => [$feature, Feature::active($feature) ? 'on' : 'off'],
+                $defined,
+            ));
+
+            return self::SUCCESS;
+        }
+
+        if (! in_array($name, $defined, true)) {
+            $this->error("'{$name}' is not a feature in this build.");
+
+            return self::FAILURE;
+        }
+
+        $chosen = array_keys(array_filter([
+            'on' => $this->option('on'),
+            'off' => $this->option('off'),
+            'reset' => $this->option('reset'),
+        ]));
+        if (count($chosen) !== 1) {
+            $this->error('Choose exactly one of --on, --off or --reset.');
+
+            return self::FAILURE;
+        }
+
+        match ($chosen[0]) {
+            'on' => Feature::activate($name),
+            'off' => Feature::deactivate($name),
+            'reset' => Feature::forget($name),
+        };
+
+        $this->info("{$name}: ".(Feature::active($name) ? 'on' : 'off'));
+
+        return self::SUCCESS;
+    }
+}

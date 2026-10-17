@@ -1,0 +1,32 @@
+<?php
+
+namespace Modules\{{MODULE}};
+
+use App\Enums\Role;
+use App\Support\Permissions\PermissionContract;
+use App\Support\Permissions\RegistersPermissions;
+
+/**
+ * Permissions the {{MODULE}} tier adds. They don't exist in a build without this module,
+ * so every check for them denies there.
+ */
+enum Permission: string implements PermissionContract
+{
+    use RegistersPermissions;
+
+    case ViewExample = '{{MODULE_TIER}}.example.view';
+
+    public function roles(): array
+    {
+        return match ($this) {
+            self::ViewExample => [Role::Admin],
+        };
+    }
+
+    public function feature(): ?string
+    {
+        return match ($this) {
+            self::ViewExample => '{{MODULE_TIER}}.example',
+        };
+    }
+}

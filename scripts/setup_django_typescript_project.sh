@@ -2,6 +2,21 @@
 
 set -e
 
+# Resolve through symlinks so templates are found when the script is linked onto PATH
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+TEMPLATES_DIR="$SCRIPT_DIR/../templates"
+# shellcheck source=SCRIPTDIR/common/render.sh
+source "$SCRIPT_DIR/common/render.sh"
+# shellcheck source=SCRIPTDIR/common/ai-guardrails.sh
+source "$SCRIPT_DIR/common/ai-guardrails.sh"
+
+AI_GUARDRAILS=true
+for arg in "$@"; do
+    case "$arg" in
+        --no-ai-guardrails) AI_GUARDRAILS=false ;;
+    esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -1206,6 +1221,11 @@ git push -u origin main
 **Created**: $(date)  
 **Happy Coding!** 🚀
 EOL
+
+if $AI_GUARDRAILS; then
+    print_status "Adding AI agent commit review gate (AGENTS.md, CLAUDE.md, .claude/settings.json)..."
+    apply_ai_guardrails "$TEMPLATES_DIR" "$PWD" "$PROJECT_NAME"
+fi
 
 print_success "Enhanced project scaffold created successfully!"
 print_status "🎉 Project: $PROJECT_NAME"

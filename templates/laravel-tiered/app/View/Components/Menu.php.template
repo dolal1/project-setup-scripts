@@ -1,0 +1,28 @@
+<?php
+
+namespace App\View\Components;
+
+use App\Support\Menu as MenuRegistry;
+use Illuminate\Contracts\View\View;
+use Illuminate\View\Component;
+
+/**
+ * Renders the menu items registered for a section that the current user may see.
+ *
+ *   <x-menu section="main" />
+ */
+class Menu extends Component
+{
+    /** @var list<array{label: string, route: string, permission: ?string, order: int}> */
+    public array $items;
+
+    public function __construct(MenuRegistry $menu, public string $section = 'main')
+    {
+        $this->items = $menu->visible($section);
+    }
+
+    public function render(): View
+    {
+        return view('components.menu');
+    }
+}

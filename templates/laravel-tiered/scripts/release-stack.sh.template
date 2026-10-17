@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Laravel hooks for scripts/build-release.sh, which sources this file.
+# Contract: docs/tiered-modules.md in project-setup-scripts.
+
+# modules/Standard for tier "standard"
+stack_module_dir() {
+    printf 'modules/%s\n' "${1^}"
+}
+
+# Patterns that must not appear once a module is gone: its PHP namespace and its view namespace
+stack_leak_patterns() {
+    printf '%s\n' "Modules\\\\${1^}\\\\" "\\b$1::"
+}
+
+stack_install_dev() {
+    composer install --no-interaction --prefer-dist --no-progress
+    [[ -f .env ]] || cp .env.example .env
+    php artisan key:generate --no-interaction
+}
+
+stack_test() {
+    php artisan test
+}
+
+# vendor/ stays in the zip for hosts without SSH; the client repo itself ignores it
+stack_install_prod() {
+    composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+    rm -rf .env .phpunit.result.cache .phpunit.cache
+}

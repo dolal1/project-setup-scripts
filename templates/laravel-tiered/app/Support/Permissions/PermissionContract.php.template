@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Support\Permissions;
+
+use App\Enums\Role;
+
+/**
+ * Implemented by every Permission enum: core's App\Enums\Permission and one per module.
+ */
+interface PermissionContract
+{
+    /**
+     * Roles that hold this permission.
+     *
+     * @return list<Role>
+     */
+    public function roles(): array;
+
+    /**
+     * Pennant feature that must be on for this permission to pass, or null for none.
+     */
+    public function feature(): ?string;
+}

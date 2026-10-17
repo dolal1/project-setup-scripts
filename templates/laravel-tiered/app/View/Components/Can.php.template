@@ -1,0 +1,53 @@
+<?php
+
+namespace App\View\Components;
+
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\View\Component;
+use Laravel\Pennant\Feature;
+
+/**
+ * One check for "is this feature in the build and on?" and "may this user do it?".
+ *
+ *   <x-can permission="users.manage">...</x-can>
+ *   <x-can any :permission="['reports.view', 'reports.export']">...</x-can>
+ *   <x-can feature="appointments">...<x-slot:else>Not switched on</x-slot:else></x-can>
+ *   <x-can permission="stock.adjust" upgrade="Premium">...</x-can>
+ *
+ * With upgrade="Tier", a denied check shows a muted "Available in Tier" hint instead of nothing.
+ * Permissions and features of modules missing from the build are simply denied.
+ */
+class Can extends Component
+{
+    /**
+     * @param  string|list<string>|null  $permission
+     */
+    public function __construct(
+        public string|array|null $permission = null,
+        public bool $any = false,
+        public ?string $feature = null,
+        public ?string $upgrade = null,
+    ) {}
+
+    public function passes(): bool
+    {
+        if ($this->feature !== null
+            && ! (in_array($this->feature, Feature::defined(), true) && Feature::active($this->feature))) {
+            return false;
+        }
+
+        if ($this->permission === null) {
+            return true;
+        }
+
+        $permissions = (array) $this->permission;
+
+        return $this->any ? Gate::any($permissions) : Gate::check($permissions);
+    }
+
+    public function render(): View
+    {
+        return view('components.can');
+    }
+}

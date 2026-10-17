@@ -1,0 +1,16 @@
+# Paths removed from every client release by scripts/build-release.sh, one per line.
+# These are internal: planning, pricing, agreements, AI-agent rules and the release tooling.
+docs/
+notes/
+quotation/
+agreement/
+.github/
+.claude/
+AGENTS.md
+CLAUDE.md
+scripts/build-release.sh
+scripts/release-stack.sh
+scripts/propose-commit.sh
+scripts/render-agreement.py
+release.exclude
+# Add other internal paths of this project below.

@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Support;
+
+use Illuminate\Support\Facades\Gate;
+
+/**
+ * Navigation registry. Modules add their own items from their service provider, so core
+ * never needs to know which modules exist. Render a section with <x-menu section="main" />.
+ */
+final class Menu
+{
+    /** @var array<string, list<array{label: string, route: string, permission: ?string, order: int}>> */
+    private array $items = [];
+
+    public function add(string $section, string $label, string $route, ?string $permission = null, int $order = 100): void
+    {
+        $this->items[$section][] = compact('label', 'route', 'permission', 'order');
+    }
+
+    /**
+     * Items in a section that the current user may see, in order.
+     *
+     * @return list<array{label: string, route: string, permission: ?string, order: int}>
+     */
+    public function visible(string $section): array
+    {
+        return collect($this->items[$section] ?? [])
+            ->filter(fn (array $item): bool => $item['permission'] === null || Gate::allows($item['permission']))
+            ->sortBy('order')
+            ->values()
+            ->all();
+    }
+}

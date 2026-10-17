@@ -1,0 +1,13 @@
+<?php
+
+namespace App\Enums;
+
+/**
+ * Every role the app knows about, in every tier. A role that only matters in a higher tier
+ * still lives here; it simply holds no permissions until that tier's module registers them.
+ */
+enum Role: string
+{
+    case Admin = 'admin';
+    case Staff = 'staff';
+}

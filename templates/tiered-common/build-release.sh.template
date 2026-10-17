@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# Build a client release that contains only the tiers the client bought.
+#
+# Usage: scripts/build-release.sh <tier> <version> [--ref <git-ref>]
+#   e.g. scripts/build-release.sh standard 1.0.0
+#
+# Code for higher tiers is removed, not switched off, so it can't be unlocked by editing
+# config. The result is a fresh one-commit git repo (no history, since history holds every
+# tier) plus a zip and its SHA-256. Stack-specific steps live in scripts/release-stack.sh.
+#
+# Contract: docs/tiered-modules.md in project-setup-scripts.
+
+set -euo pipefail
+
+PROJECT_NAME="{{PROJECT_NAME}}"
+TIER_VAR="{{PREFIX_UPPER}}_TIER"
+TIERS=({{TIERS}})
+
+usage() {
+    echo "Usage: $0 <tier> <version> [--ref <git-ref>]   tiers: ${TIERS[*]}" >&2
+    exit 1
+}
+
+(( $# >= 2 )) || usage
+tier="$1" version="$2" ref="HEAD"
+shift 2
+while (( $# )); do
+    case "$1" in
+        --ref) ref="${2:?--ref needs a value}"; shift 2 ;;
+        *) usage ;;
+    esac
+done
+
+tier_index=-1
+for i in "${!TIERS[@]}"; do
+    [[ "${TIERS[$i]}" == "$tier" ]] && tier_index=$i
+done
+(( tier_index >= 0 )) || { echo "Unknown tier '$tier'." >&2; usage; }
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] \
+    || { echo "Version '$version' should look like 1.0.0" >&2; exit 1; }
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+# shellcheck source=/dev/null
+source scripts/release-stack.sh
+
+if [[ -n "$(git status --porcelain)" ]]; then
+    echo "Note: the working tree has uncommitted changes. Only $ref is released." >&2
+fi
+
+tier_label="${tier^}"
+slug="$(basename "$root")"
+out_dir="${RELEASE_OUT:-$root/../$slug-releases}"
+name="$slug-$version-$tier"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+app="$work/$name"
+mkdir -p "$app" "$out_dir"
+
+echo "==> Exporting $ref (no git history)"
+git archive "$ref" | tar -x -C "$app"
+
+echo "==> Removing tiers above $tier"
+leak_patterns=()
+for (( i = tier_index + 1; i < ${#TIERS[@]}; i++ )); do
+    module_dir="$(stack_module_dir "${TIERS[$i]}")"
+    rm -rf "${app:?}/$module_dir"
+    leak_patterns+=("$module_dir")
+    while IFS= read -r pattern; do
+        [[ -n "$pattern" ]] && leak_patterns+=("$pattern")
+    done < <(stack_leak_patterns "${TIERS[$i]}")
+done
+
+echo "==> Removing internal files (release.exclude)"
+if [[ -f release.exclude ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line//[[:space:]]/}"
+        [[ -z "$line" ]] && continue
+        rm -rf "${app:?}/${line%/}"
+    done < release.exclude
+fi
+
+echo "==> Setting $TIER_VAR=$tier in .env.example"
+touch "$app/.env.example"
+if grep -q "^$TIER_VAR=" "$app/.env.example"; then
+    sed -i.bak "s/^$TIER_VAR=.*/$TIER_VAR=$tier/" "$app/.env.example" && rm -f "$app/.env.example.bak"
+else
+    printf '\n%s=%s\n' "$TIER_VAR" "$tier" >> "$app/.env.example"
+fi
+
+if (( ${#leak_patterns[@]} )); then
+    echo "==> Leak check"
+    leaks=""
+    for pattern in "${leak_patterns[@]}"; do
+        found="$(grep -rIlE --exclude-dir=vendor --exclude-dir=node_modules -- "$pattern" "$app" || true)"
+        [[ -n "$found" ]] && leaks+="  /$pattern/ in:"$'\n'"${found//$app\//    }"$'\n'
+    done
+    if [[ -n "$leaks" ]]; then
+        echo "Release would still mention removed tiers:" >&2
+        printf '%s' "$leaks" >&2
+        exit 1
+    fi
+fi
+
+echo "==> Installing and testing the stripped build ($TIER_VAR=$tier)"
+(
+    cd "$app"
+    export "$TIER_VAR=$tier"
+    stack_install_dev
+    stack_test
+    stack_install_prod
+)
+
+echo "==> Creating the client repository"
+(
+    cd "$app"
+    git init -q
+    git add -A
+    git commit -q -m "$PROJECT_NAME v$version ($tier_label)"
+)
+
+archive="$out_dir/$name.zip"
+rm -f "$archive"
+if command -v zip > /dev/null; then
+    (cd "$work" && zip -qr "$archive" "$name")
+else
+    archive="$out_dir/$name.tar.gz"
+    tar -czf "$archive" -C "$work" "$name"
+fi
+sha="$(sha256sum "$archive" 2>/dev/null || shasum -a 256 "$archive")"
+sha="${sha%% *}"
+
+# notes/ is git-excluded in client projects, so the handover record stays on this machine
+if [[ -d "$root/notes" ]]; then
+    releases="$root/notes/releases.md"
+    if [[ ! -f "$releases" ]]; then
+        printf '# Releases\n\n| Date | Version | Tier | Ref | SHA-256 |\n| --- | --- | --- | --- | --- |\n' > "$releases"
+    fi
+    # shellcheck disable=SC2016  # the backticks are Markdown, not command substitution
+    printf '| %s | %s | %s | %s | `%s` |\n' "$(date +%F)" "$version" "$tier_label" \
+        "$(git rev-parse --short "$ref")" "$sha" >> "$releases"
+fi
+
+echo
+echo "Release: $archive"
+echo "SHA-256: $sha"

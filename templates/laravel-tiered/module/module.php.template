@@ -1,0 +1,9 @@
+<?php
+
+// Read by App\Support\Modules. This module loads when {{PREFIX_UPPER}}_TIER is '{{MODULE_TIER}}'
+// or higher, every tier in 'requires' has loaded, and this folder is in the build.
+return [
+    'tier' => '{{MODULE_TIER}}',
+    'requires' => [{{MODULE_REQUIRES_PHP}}],
+    'provider' => Modules\{{MODULE}}\{{MODULE}}ServiceProvider::class,
+];

@@ -1,0 +1,36 @@
+# Working on project-setup-scripts with an AI coding agent
+
+These rules apply to any LLM or coding agent working in this repository (Claude Code, Codex,
+Cursor, Copilot, Aider, and others). Humans are welcome to follow them too.
+
+## Commit review gate
+
+A human approves every commit before it is made.
+
+1. Stage the changes you intend to commit.
+2. Write the exact commit message to the file printed by `git rev-parse --git-path COMMIT_PROPOSAL`.
+3. Show the human:
+   - `git status --short`
+   - `git diff --cached --stat` (and the full diff if they ask)
+   - the proposed commit message, verbatim
+4. Stop and wait. Commit only after the human approves, using the message as they approved or
+   edited it.
+
+`scripts/propose-commit.sh` does steps 3–4 for you. It asks for approval on the terminal and
+cannot be answered by piping input into it, so the human must type the answer. Agents whose tool
+settings cannot pause on `git commit` should ask the human to run it.
+
+## Never without explicit approval
+
+- `git push`, `git remote add`, creating or forking a repository (`gh repo create`, `gh repo fork`)
+- Force operations: `git push --force`, `git reset --hard`, `git clean -fd`, rewriting history
+- Deleting branches, tags, or files you did not create in this session
+
+Commits stay local until the human says to push.
+
+## Project rules
+
+- This repository is public. Never add client names, prices, contact details or business strategy. Those belong in the private client-project-kit.
+- Every setup script applies `scripts/common/ai-guardrails.sh` unless run with `--no-ai-guardrails`.
+- Template paths must avoid `build/` and `lib/`, which `.gitignore` ignores.
+- Run `shellcheck -x` on changed scripts and `./tests/test_ai_guardrails.sh` before proposing a commit.

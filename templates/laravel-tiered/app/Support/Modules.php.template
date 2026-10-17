@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Support;
+
+/**
+ * Finds tier modules on disk and decides which of them load.
+ *
+ * Each folder under modules/ has a module.php returning
+ * ['tier' => 'standard', 'requires' => [], 'provider' => SomeServiceProvider::class].
+ * A module loads when its tier is at or below the active tier, its folder exists in this
+ * build, and every tier it requires has loaded. Core (the first tier) is always loaded.
+ */
+final class Modules
+{
+    /** @var list<string> */
+    private array $loaded = [];
+
+    /** @var list<string> */
+    private array $warnings = [];
+
+    /**
+     * @param  list<string>  $tiers  every tier, lowest first; the first one is core
+     */
+    public function __construct(
+        private readonly array $tiers,
+        private readonly string $activeTier,
+        private readonly string $path,
+    ) {}
+
+    /**
+     * Service providers of the modules that load, in tier order.
+     *
+     * @return list<class-string>
+     */
+    public function providers(): array
+    {
+        $activeIndex = array_search($this->activeTier, $this->tiers, true);
+        if ($activeIndex === false) {
+            $this->warnings[] = "Unknown tier '{$this->activeTier}'; loading core only.";
+            $activeIndex = 0;
+        }
+
+        $onDisk = $this->discover();
+        $providers = [];
+        $this->loaded = [$this->tiers[0]];
+
+        foreach (array_slice($this->tiers, 1, $activeIndex) as $tier) {
+            $module = $onDisk[$tier] ?? null;
+            if ($module === null) {
+                $this->warnings[] = "Tier '{$tier}' is active but its module is not in this build.";
+
+                continue;
+            }
+
+            $missing = array_diff($module['requires'] ?? [], $this->loaded);
+            if ($missing !== []) {
+                $this->warnings[] = "Tier '{$tier}' needs ".implode(', ', $missing).', which did not load.';
+
+                continue;
+            }
+
+            $providers[] = $module['provider'];
+            $this->loaded[] = $tier;
+        }
+
+        return $providers;
+    }
+
+    /**
+     * Tiers that loaded, core first.
+     *
+     * @return list<string>
+     */
+    public function loaded(): array
+    {
+        return $this->loaded;
+    }
+
+    public function has(string $tier): bool
+    {
+        return in_array($tier, $this->loaded, true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function warnings(): array
+    {
+        return $this->warnings;
+    }
+
+    /**
+     * @return array<string, array{tier: string, requires?: list<string>, provider: class-string}>
+     */
+    private function discover(): array
+    {
+        $modules = [];
+        foreach (glob($this->path.'/*/module.php') ?: [] as $file) {
+            $module = require $file;
+            $modules[$module['tier']] = $module;
+        }
+
+        return $modules;
+    }
+}

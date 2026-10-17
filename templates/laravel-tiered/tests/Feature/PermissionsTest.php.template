@@ -1,0 +1,57 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\Role;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
+use Tests\TestCase;
+
+class PermissionsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_gates_follow_the_roles_each_permission_lists(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $staff = User::factory()->create(['role' => Role::Staff]);
+
+        $this->assertTrue(Gate::forUser($admin)->allows('users.manage'));
+        $this->assertFalse(Gate::forUser($staff)->allows('users.manage'));
+        $this->assertTrue(Gate::forUser($staff)->allows('dashboard.view'));
+    }
+
+    public function test_a_permission_that_was_never_defined_denies(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $this->assertFalse(Gate::forUser($admin)->allows('not-in-this-build.do'));
+    }
+
+    public function test_can_component_shows_slot_else_or_upgrade_hint(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Role::Staff]));
+
+        $this->assertSame('yes', trim(Blade::render('<x-can permission="dashboard.view">yes</x-can>')));
+        $this->assertSame('', trim(Blade::render('<x-can permission="users.manage">yes</x-can>')));
+        $this->assertSame('no', trim(Blade::render(
+            '<x-can permission="users.manage">yes<x-slot:else>no</x-slot:else></x-can>'
+        )));
+        $this->assertStringContainsString('Available in Gold', Blade::render(
+            '<x-can permission="not-in-this-build.do" upgrade="Gold">yes</x-can>'
+        ));
+        $this->assertSame('yes', trim(Blade::render(
+            '<x-can any :permission="[\'users.manage\', \'dashboard.view\']">yes</x-can>'
+        )));
+        $this->assertSame('', trim(Blade::render('<x-can feature="not-in-this-build">yes</x-can>')));
+    }
+
+    public function test_feature_command_refuses_features_outside_the_build(): void
+    {
+        $this->artisan('{{PREFIX}}:feature', ['name' => 'not-in-this-build', '--on' => true])
+            ->expectsOutputToContain('not a feature in this build')
+            ->assertFailed();
+    }
+}
