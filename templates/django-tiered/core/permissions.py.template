@@ -1,0 +1,61 @@
+"""Roles and permissions, with tier awareness.
+
+Core's permissions are in Permission below. Each tier module has its own Permission enum
+(subclassing TierPermission) and registers it from its AppConfig.ready(). A permission passes
+only when its feature switch (if any) is defined in this build and on, and the user's role is
+listed. A permission nobody registered denies, so checks for tiers missing from a build are
+simply false.
+"""
+from enum import Enum
+
+from django.db import models
+
+from core import features
+
+
+class Role(models.TextChoices):
+    ADMIN = "admin", "Admin"
+    STAFF = "staff", "Staff"
+
+
+class TierPermission(Enum):
+    """Base for every Permission enum. Members are permission names such as "users.manage"."""
+
+    def roles(self) -> list[Role]:
+        raise NotImplementedError
+
+    def feature(self) -> str | None:
+        return None
+
+    def allows(self, user) -> bool:
+        if not getattr(user, "is_authenticated", False) or not user.is_active:
+            return False
+        feature = self.feature()
+        if feature is not None and not features.is_active(feature):
+            return False
+        return user.role in self.roles()
+
+
+_registry: dict[str, TierPermission] = {}
+
+
+def register(permissions: type[TierPermission]) -> None:
+    for permission in permissions:
+        _registry[permission.value] = permission
+
+
+def lookup(name: str) -> TierPermission | None:
+    return _registry.get(name)
+
+
+class Permission(TierPermission):
+    """Core ({{CORE_TIER_LABEL}}) permissions."""
+
+    VIEW_DASHBOARD = "dashboard.view"
+    MANAGE_USERS = "users.manage"
+
+    def roles(self) -> list[Role]:
+        return {
+            Permission.VIEW_DASHBOARD: [Role.ADMIN, Role.STAFF],
+            Permission.MANAGE_USERS: [Role.ADMIN],
+        }[self]

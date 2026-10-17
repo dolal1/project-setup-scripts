@@ -1,0 +1,64 @@
+"""Finds tier modules on disk and decides which of them load.
+
+Each folder under modules/ has a module.py with TIER, REQUIRES and APP (the app's dotted path).
+A module loads when its tier is at or below the active tier, its folder exists in this build,
+and every tier it requires has loaded. Core (the first tier) is always loaded.
+
+This file is imported by settings, so it must not import Django.
+"""
+import importlib.util
+from pathlib import Path
+
+
+class Modules:
+    def __init__(self, tiers: list[str], active_tier: str, path: Path):
+        self.tiers = tiers
+        self.active_tier = active_tier
+        self.path = Path(path)
+        self.warnings: list[str] = []
+        self._loaded: list[tuple[str, str]] = []
+        self._resolve()
+
+    def _resolve(self) -> None:
+        if self.active_tier in self.tiers:
+            active_index = self.tiers.index(self.active_tier)
+        else:
+            self.warnings.append(f"Unknown tier '{self.active_tier}'; loading core only.")
+            active_index = 0
+
+        on_disk = self._discover()
+        loaded_tiers = [self.tiers[0]]
+        for tier in self.tiers[1 : active_index + 1]:
+            module = on_disk.get(tier)
+            if module is None:
+                self.warnings.append(f"Tier '{tier}' is active but its module is not in this build.")
+                continue
+            missing = [r for r in module["requires"] if r not in loaded_tiers]
+            if missing:
+                self.warnings.append(f"Tier '{tier}' needs {', '.join(missing)}, which did not load.")
+                continue
+            self._loaded.append((tier, module["app"]))
+            loaded_tiers.append(tier)
+
+    def _discover(self) -> dict[str, dict]:
+        modules = {}
+        for manifest in sorted(self.path.glob("*/module.py")):
+            spec = importlib.util.spec_from_file_location(f"_tier_manifest_{manifest.parent.name}", manifest)
+            loaded = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(loaded)
+            modules[loaded.TIER] = {"requires": list(getattr(loaded, "REQUIRES", [])), "app": loaded.APP}
+        return modules
+
+    def apps(self) -> list[str]:
+        """Dotted paths of the module apps that load, in tier order."""
+        return [app for _, app in self._loaded]
+
+    def loaded_apps(self) -> list[tuple[str, str]]:
+        return list(self._loaded)
+
+    def loaded(self) -> list[str]:
+        """Tiers that loaded, core first."""
+        return [self.tiers[0], *(tier for tier, _ in self._loaded)]
+
+    def has(self, tier: str) -> bool:
+        return tier in self.loaded()

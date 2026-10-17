@@ -17,12 +17,18 @@ templates/
 ├── tiered-common/              # Shared by every tiered stack
 │   ├── build-release.sh.template   # {{PROJECT_NAME}}, {{PREFIX_UPPER}}, {{TIERS}}
 │   └── release.exclude.template
-└── laravel-tiered/             # setup_laravel_tiered_project.sh
-    ├── app/ config/ database/ resources/ tests/   # core loader, permissions, components, tests
-    ├── module/                 # rendered once per tier above core into modules/<Tier>/
-    ├── github/workflows/ci.yml.template            # becomes .github/workflows/ci.yml
-    ├── scripts/release-stack.sh.template           # Laravel hooks for build-release.sh
-    └── README.md.template
+├── laravel-tiered/             # setup_laravel_tiered_project.sh
+│   ├── app/ config/ database/ resources/ tests/   # core loader, permissions, components, tests
+│   ├── module/                 # rendered once per tier above core into modules/<Tier>/
+│   ├── github/workflows/ci.yml.template            # becomes .github/workflows/ci.yml
+│   ├── scripts/release-stack.sh.template           # Laravel hooks for build-release.sh
+│   └── README.md.template
+└── django-tiered/              # setup_django_tiered_project.sh
+    ├── config/ core/ templates/                    # settings, loader, permissions, tags, tests
+    ├── module/                 # rendered once per tier above core into modules/<tier>/
+    ├── github/workflows/ci.yml.template
+    ├── scripts/release-stack.sh.template           # Django hooks for build-release.sh
+    └── requirements*.txt, pytest.ini, env.example, gitignore, README.md templates
 ```
 
 Laravel tiered placeholders: `{{PREFIX}}`, `{{PREFIX_UPPER}}`, `{{CORE_TIER}}`, `{{TOP_TIER}}`,

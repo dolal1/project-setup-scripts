@@ -1,0 +1,10 @@
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import render
+
+from .permissions import Permission
+
+
+@login_required
+@permission_required(Permission.VIEW_EXAMPLE.value, raise_exception=True)
+def example(request):
+    return render(request, "{{MODULE_TIER}}/example.html")

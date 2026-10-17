@@ -1,0 +1,41 @@
+"""Feature switches, defined by the tier modules that are in this build.
+
+Each module defines its switches from AppConfig.ready() with a default (on). Turning one off or
+on stores a django-waffle Switch row, which also shows up in the admin; resetting deletes the row
+so the default applies again. A switch nobody defined is always off: switches turn delivered
+features off for a while, they never unlock a tier that isn't in the build.
+
+    python manage.py {{PREFIX}}_feature                      list switches
+    python manage.py {{PREFIX}}_feature <name> --off         switch one off (or --on, --reset)
+"""
+
+_defaults: dict[str, bool] = {}
+
+
+def define(name: str, default: bool = True) -> None:
+    _defaults[name] = default
+
+
+def defined() -> list[str]:
+    return sorted(_defaults)
+
+
+def is_active(name: str) -> bool:
+    if name not in _defaults:
+        return False
+    from waffle.models import Switch
+
+    stored = Switch.objects.filter(name=name).values_list("active", flat=True).first()
+    return _defaults[name] if stored is None else stored
+
+
+def set_active(name: str, active: bool) -> None:
+    from waffle.models import Switch
+
+    Switch.objects.update_or_create(name=name, defaults={"active": active})
+
+
+def reset(name: str) -> None:
+    from waffle.models import Switch
+
+    Switch.objects.filter(name=name).delete()

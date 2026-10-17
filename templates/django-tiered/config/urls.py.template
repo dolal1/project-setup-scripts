@@ -1,0 +1,12 @@
+from django.conf import settings
+from django.contrib import admin
+from django.urls import include, path
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", include("core.urls")),
+]
+
+# Each loaded tier module's URLs live under /<tier>/. A module missing from the build has no URLs.
+for tier, app in settings.TIER_MODULES.loaded_apps():
+    urlpatterns.append(path(f"{tier}/", include(f"{app}.urls")))

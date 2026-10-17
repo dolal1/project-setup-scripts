@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.tier }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: {{TIERS_JSON}}
+    env:
+      {{PREFIX_UPPER}}_TIER: ${{ matrix.tier }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '{{PYTHON_VERSION}}'
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py makemigrations --check --dry-run
+      - run: pytest
+
+  # Every lower tier must build and pass its own tests with the higher modules removed
+  release-smoke:
+    name: Release build (${{ matrix.tier }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: {{LOWER_TIERS_JSON}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '{{PYTHON_VERSION}}'
+      - run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.invalid"
+          RELEASE_OUT="$RUNNER_TEMP/releases" scripts/build-release.sh "${{ matrix.tier }}" 0.0.0-ci

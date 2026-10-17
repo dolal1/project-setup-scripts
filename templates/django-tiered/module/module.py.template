@@ -1,0 +1,5 @@
+# Read by core/modules.py. This module loads when {{PREFIX_UPPER}}_TIER is '{{MODULE_TIER}}' or higher,
+# every tier in REQUIRES has loaded, and this folder is in the build.
+TIER = "{{MODULE_TIER}}"
+REQUIRES = [{{MODULE_REQUIRES_PY}}]
+APP = "modules.{{MODULE_TIER}}"

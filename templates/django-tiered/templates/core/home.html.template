@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% load tiers %}
+{% block content %}
+<h1>Welcome</h1>
+{% can "users.manage" %}<p>You can manage users in the <a href="{% url 'admin:index' %}">admin</a>.</p>{% endcan %}
+{% endblock %}

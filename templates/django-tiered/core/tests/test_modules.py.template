@@ -1,0 +1,47 @@
+from core.modules import Modules
+
+
+def module(path, tier, requires=()):
+    folder = path / tier
+    folder.mkdir()
+    (folder / "module.py").write_text(f"TIER = {tier!r}\nREQUIRES = {list(requires)!r}\nAPP = 'apps.{tier}'\n")
+
+
+def test_loads_modules_up_to_the_active_tier(tmp_path):
+    module(tmp_path, "two")
+    module(tmp_path, "three", ["two"])
+
+    modules = Modules(["one", "two", "three"], "two", tmp_path)
+
+    assert modules.apps() == ["apps.two"]
+    assert modules.loaded() == ["one", "two"]
+    assert not modules.has("three")
+    assert modules.warnings == []
+
+
+def test_a_missing_module_is_skipped_with_a_warning(tmp_path):
+    module(tmp_path, "two")
+
+    modules = Modules(["one", "two", "three"], "three", tmp_path)
+
+    assert modules.apps() == ["apps.two"]
+    assert len(modules.warnings) == 1
+
+
+def test_a_module_whose_requirement_did_not_load_is_skipped(tmp_path):
+    module(tmp_path, "three", ["two"])
+
+    modules = Modules(["one", "two", "three"], "three", tmp_path)
+
+    assert modules.apps() == []
+    assert modules.loaded() == ["one"]
+    assert len(modules.warnings) == 2
+
+
+def test_an_unknown_tier_loads_core_only(tmp_path):
+    module(tmp_path, "two")
+
+    modules = Modules(["one", "two"], "gold", tmp_path)
+
+    assert modules.apps() == []
+    assert len(modules.warnings) == 1

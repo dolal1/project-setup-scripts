@@ -107,10 +107,14 @@ also ask before `scripts/build-release.sh` runs, since a release is something a 
 | Module folder | `modules/Standard/` (PSR-4 `Modules\Standard\`) | `modules/standard/` (Django app) | `modules/standard/` (npm workspace) |
 | Manifest | `module.php` | `module.py` (`TIER`, `REQUIRES`, `APP`) | `module.json` |
 | Loader | `App\Support\Modules` registers providers | settings build `INSTALLED_APPS` and URLs from modules on disk | `loadModules()` mounts routers from modules on disk |
-| Feature switches | Laravel Pennant | django-waffle | `features` table and service |
-| Permissions | `Permission` enum → Gates, `<x-can>` | `Permission` enum → auth backend, `{% can %}` | `Permission` enum → `can()` middleware and view helper |
-| Arch test | PHPUnit scan for `Modules\` | pytest scan for `modules.` imports | vitest scan for `modules/` imports |
-| Scaffolder | `setup_laravel_tiered_project.sh` | `setup_django_tiered_project.sh` (planned) | `setup_node_tiered_project.sh` (planned) |
+| Feature switches | Laravel Pennant | `core.features` registry, overrides stored as django-waffle switches | `features` table and service |
+| Permissions | `Permission` enum → Gates, `<x-can>` | `Permission` enum → `User.has_perm`, Django `can` template tag | `Permission` enum → `can()` middleware and view helper |
+| Arch test | PHPUnit scan for `Modules\` | pytest scan for `modules` imports, tier URL namespaces and template folders | vitest scan for `modules/` imports |
+| Scaffolder | `setup_laravel_tiered_project.sh` | `setup_django_tiered_project.sh` | `setup_node_tiered_project.sh` (planned) |
+
+**Django note:** a Django superuser normally passes every permission check. The generated
+`User.has_perm` keeps tier permissions to feature + role even for superusers, lets Django's own
+model permissions (`core.change_user`, used by the admin) work as usual, and denies anything else.
 
 Shared shell helpers for the scaffolders are in `scripts/common/tiered.sh`. Run
 `./tests/test_tiered_common.sh` to check the helpers and the release builder against a stub stack.
