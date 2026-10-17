@@ -50,6 +50,15 @@ jobs:
         
         echo "✅ Django TypeScript setup script test passed"
 
+  test-ai-guardrails:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Test AI agent commit review gate
+      run: ./tests/test_ai_guardrails.sh
+
   shellcheck:
     runs-on: ubuntu-latest
     

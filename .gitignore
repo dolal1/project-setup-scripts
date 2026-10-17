@@ -63,3 +63,5 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+# AI agent personal settings
+.claude/settings.local.json

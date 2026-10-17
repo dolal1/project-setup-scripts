@@ -102,6 +102,16 @@ fi
 
 print_success ".gitignore exists"
 
+# Check the AI agent commit review gate (skipped only with --no-ai-guardrails)
+for guardrail in AGENTS.md CLAUDE.md .claude/settings.json scripts/propose-commit.sh; do
+    if [ ! -f "$guardrail" ]; then
+        print_error "AI guardrail file not found: $guardrail"
+        exit 1
+    fi
+done
+
+print_success "AI agent commit review gate present"
+
 # Script-specific checks
 case "$SCRIPT_NAME" in
     "setup_django_typescript_project")
