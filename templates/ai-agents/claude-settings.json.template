@@ -6,7 +6,8 @@
       "Bash(git remote add:*)",
       "Bash(git reset --hard:*)",
       "Bash(gh repo create:*)",
-      "Bash(gh repo fork:*)"
+      "Bash(gh repo fork:*)",
+      "Bash(scripts/build-release.sh:*)"
     ]
   }
 }

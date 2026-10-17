@@ -59,6 +59,15 @@ jobs:
     - name: Test AI agent commit review gate
       run: ./tests/test_ai_guardrails.sh
 
+  test-tiered-common:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Test tier helpers and release builder (stub stack)
+      run: ./tests/test_tiered_common.sh
+
   shellcheck:
     runs-on: ubuntu-latest
     
