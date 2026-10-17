@@ -23,12 +23,18 @@ templates/
 │   ├── github/workflows/ci.yml.template            # becomes .github/workflows/ci.yml
 │   ├── scripts/release-stack.sh.template           # Laravel hooks for build-release.sh
 │   └── README.md.template
-└── django-tiered/              # setup_django_tiered_project.sh
-    ├── config/ core/ templates/                    # settings, loader, permissions, tags, tests
+├── django-tiered/              # setup_django_tiered_project.sh
+│   ├── config/ core/ templates/                    # settings, loader, permissions, tags, tests
+│   ├── module/                 # rendered once per tier above core into modules/<tier>/
+│   ├── github/workflows/ci.yml.template
+│   ├── scripts/release-stack.sh.template           # Django hooks for build-release.sh
+│   └── requirements*.txt, pytest.ini, env.example, gitignore, README.md templates
+└── node-tiered/                # setup_node_tiered_project.sh
+    ├── src/ views/ test/       # loader, permissions, features, sessions, CSRF, CLIs, tests
     ├── module/                 # rendered once per tier above core into modules/<tier>/
     ├── github/workflows/ci.yml.template
-    ├── scripts/release-stack.sh.template           # Django hooks for build-release.sh
-    └── requirements*.txt, pytest.ini, env.example, gitignore, README.md templates
+    ├── scripts/release-stack.sh.template           # Node hooks for build-release.sh
+    └── package.json, tsconfig.json, vitest.config.ts, env.example, gitignore, README.md templates
 ```
 
 Laravel tiered placeholders: `{{PREFIX}}`, `{{PREFIX_UPPER}}`, `{{CORE_TIER}}`, `{{TOP_TIER}}`,

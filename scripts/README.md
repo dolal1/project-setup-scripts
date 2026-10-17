@@ -54,6 +54,22 @@ Set `LARAVEL_PHP_PLATFORM` (default `8.2.0`) to the lowest PHP version the clien
 
 Set `DJANGO_PYTHON_VERSION` (default `3.12`) for the Python version the generated CI uses.
 
+### Node.js, tiered
+
+**File**: `setup_node_tiered_project.sh`
+**Description**: Node.js app (Express 5, TypeScript, EJS, Knex) sold in tiers; every tier above core
+is a removable folder in `modules/<tier>/`, and `scripts/build-release.sh` builds client releases
+without the higher tiers
+**Technologies**: Express 5, TypeScript, EJS, Knex (SQLite, MySQL), Vitest, Supertest, GitHub Actions
+**Contract**: [docs/tiered-modules.md](../docs/tiered-modules.md)
+
+```bash
+./setup_node_tiered_project.sh my-app --prefix myapp --tiers basic,standard,premium
+./setup_node_tiered_project.sh path/to/repo --prefix myapp --into-existing
+```
+
+Set `NODE_CI_VERSION` (default `22`) for the Node.js version the generated CI uses.
+
 ## 🧰 Shared helpers (`common/`)
 
 Sourced by the setup scripts, never run directly:
@@ -78,6 +94,10 @@ Sourced by the setup scripts, never run directly:
 - Node.js 18+
 - Docker & Docker Compose
 - npm/yarn
+
+### Node Tiered Script
+
+- Node.js 22+ and npm
 
 ### Django Tiered Script
 

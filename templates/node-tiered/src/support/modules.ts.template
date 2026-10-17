@@ -1,0 +1,112 @@
+/**
+ * Finds tier modules on disk and decides which of them load.
+ *
+ * Each folder under modules/ has a module.json: {"tier": "standard", "requires": [], "entry": "src/index"}.
+ * A module loads when its tier is at or below the active tier, its folder exists in this build,
+ * and every tier it requires has loaded. Core (the first tier) is always loaded.
+ */
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import type { Router } from "express";
+import { RUNTIME_EXT, RUNTIME_ROOT } from "../config/paths.js";
+import type { Migration } from "./db.js";
+import type { Features } from "./features.js";
+import type { Menu } from "./menu.js";
+import type { Permissions } from "./permissions.js";
+
+interface Manifest {
+  tier: string;
+  requires?: string[];
+  entry: string;
+  folder: string;
+}
+
+/** What a module's entry point receives: the hooks core offers. */
+export interface ModuleContext {
+  tier: string;
+  router: Router;
+  features: Features;
+  permissions: Permissions;
+  menu: Menu;
+}
+
+/** What a module's entry point exports. */
+export interface TierModule {
+  register(context: ModuleContext): void;
+  migrations?: Migration[];
+}
+
+export class Modules {
+  readonly warnings: string[] = [];
+  private readonly selected: Manifest[] = [];
+
+  constructor(
+    readonly tiers: string[],
+    readonly activeTier: string,
+    readonly path: string,
+  ) {
+    let activeIndex = tiers.indexOf(activeTier);
+    if (activeIndex === -1) {
+      this.warnings.push(`Unknown tier '${activeTier}'; loading core only.`);
+      activeIndex = 0;
+    }
+
+    const onDisk = this.discover();
+    const loaded = [tiers[0]];
+    for (const tier of tiers.slice(1, activeIndex + 1)) {
+      const manifest = onDisk.get(tier);
+      if (!manifest) {
+        this.warnings.push(`Tier '${tier}' is active but its module is not in this build.`);
+        continue;
+      }
+      const missing = (manifest.requires ?? []).filter((r) => !loaded.includes(r));
+      if (missing.length) {
+        this.warnings.push(`Tier '${tier}' needs ${missing.join(", ")}, which did not load.`);
+        continue;
+      }
+      this.selected.push(manifest);
+      loaded.push(tier);
+    }
+  }
+
+  /** Tiers that loaded, core first. */
+  loaded(): string[] {
+    return [this.tiers[0], ...this.selected.map((m) => m.tier)];
+  }
+
+  has(tier: string): boolean {
+    return this.loaded().includes(tier);
+  }
+
+  /** Folder names (under modules/) of the modules that load, in tier order. */
+  folders(): string[] {
+    return this.selected.map((m) => m.folder);
+  }
+
+  /** Imports each loading module's entry point. */
+  async load(): Promise<Array<{ tier: string; folder: string; module: TierModule }>> {
+    const result = [];
+    for (const manifest of this.selected) {
+      const file = join(RUNTIME_ROOT, "modules", manifest.folder, manifest.entry + RUNTIME_EXT);
+      const module = (await import(pathToFileURL(file).href)) as TierModule;
+      result.push({ tier: manifest.tier, folder: manifest.folder, module });
+    }
+    return result;
+  }
+
+  private discover(): Map<string, Manifest> {
+    const manifests = new Map<string, Manifest>();
+    if (!existsSync(this.path)) {
+      return manifests;
+    }
+    for (const folder of readdirSync(this.path).sort()) {
+      const file = join(this.path, folder, "module.json");
+      if (existsSync(file)) {
+        const manifest = JSON.parse(readFileSync(file, "utf8")) as Omit<Manifest, "folder">;
+        manifests.set(manifest.tier, { ...manifest, folder });
+      }
+    }
+    return manifests;
+  }
+}

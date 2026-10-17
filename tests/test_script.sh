@@ -269,6 +269,54 @@ case "$SCRIPT_NAME" in
 
         print_success "All Django tiered checks passed"
         ;;
+    "setup_node_tiered_project")
+        echo "Running Node tiered specific checks..."
+
+        for f in package.json package-lock.json tsconfig.json src/app.ts src/support/modules.ts \
+            src/support/permissions.ts src/support/session-store.ts src/cli/feature.ts \
+            modules/standard/module.json modules/standard/src/index.ts modules/premium/module.json \
+            test/arch.test.ts scripts/build-release.sh scripts/release-stack.sh release.exclude \
+            .github/workflows/ci.yml; do
+            if [ ! -f "$f" ]; then
+                print_error "Expected file not found: $f"
+                exit 1
+            fi
+        done
+        if grep -rqE '\{\{[A-Z_]+\}\}' src modules views test .github AGENTS.md .env.example package.json; then
+            print_error "Unfilled {{PLACEHOLDER}} left in generated files"
+            exit 1
+        fi
+        print_success "Tier modules, permissions, sessions and release tooling generated"
+
+        npm run --silent typecheck
+        for tier in basic standard premium; do
+            DEMO_TIER=$tier npm test --silent
+        done
+        print_success "Typecheck and test suite pass at every tier"
+
+        export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+        export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+        git add -A
+        git commit -qm "test fixture"
+        for tier in basic standard; do
+            RELEASE_OUT="$TEST_DIR/releases-$$" scripts/build-release.sh "$tier" 1.0.0
+            unzip -q -o "$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-$tier.zip" -d "$TEST_DIR/releases-$$"
+        done
+        release="$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-basic"
+        if [ -e "$release/modules/standard" ] || [ -e "$release/dist/modules/standard" ] \
+            || [ -e "$release/AGENTS.md" ] || [ -e "$release/node_modules/vitest" ]; then
+            print_error "Basic release still contains a higher tier, internal files or dev dependencies"
+            exit 1
+        fi
+        if grep -rlE 'modules/(standard|premium)\b' "$release" --exclude-dir=node_modules --exclude-dir=.git; then
+            print_error "Basic release still references Standard or Premium code"
+            exit 1
+        fi
+        rm -rf "$TEST_DIR/releases-$$"
+        print_success "Lower-tier releases build, pass their own tests and contain no higher tier"
+
+        print_success "All Node tiered checks passed"
+        ;;
     *)
         print_warning "No specific tests for script: $SCRIPT_NAME"
         ;;

@@ -1,0 +1,18 @@
+import type { Migration } from "../../../src/support/db.js";
+
+// Only run when the {{MODULE}} module loads, so a lower-tier client's database never has these tables.
+export const migrations: Migration[] = [
+  {
+    name: "{{MODULE_MIGRATION_PREFIX}}_{{MODULE_TIER}}_examples",
+    async up(db) {
+      await db.schema.createTable("{{MODULE_TIER}}_examples", (t) => {
+        t.increments("id");
+        t.string("name", 100).notNullable();
+        t.timestamps(true, true);
+      });
+    },
+    async down(db) {
+      await db.schema.dropTable("{{MODULE_TIER}}_examples");
+    },
+  },
+];

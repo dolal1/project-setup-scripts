@@ -1,0 +1,55 @@
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import knexFactory, { type Knex } from "knex";
+import { config } from "../config/env.js";
+
+/**
+ * A migration as a plain object. Core and each module export a list of these, so Knex runs only
+ * the migrations of the modules in this build: a lower-tier database never gets higher-tier tables.
+ */
+export interface Migration {
+  name: string;
+  up(db: Knex): Promise<void>;
+  down(db: Knex): Promise<void>;
+}
+
+class ListMigrationSource implements Knex.MigrationSource<Migration> {
+  constructor(private readonly migrations: Migration[]) {}
+  async getMigrations() {
+    return this.migrations;
+  }
+  getMigrationName(migration: Migration) {
+    return migration.name;
+  }
+  async getMigration(migration: Migration) {
+    return { up: migration.up, down: migration.down };
+  }
+}
+
+export async function migrate(db: Knex, migrations: Migration[]): Promise<void> {
+  await db.migrate.latest({ migrationSource: new ListMigrationSource(migrations) });
+}
+
+export function createDb(): Knex {
+  const { db } = config;
+  if (db.client === "better-sqlite3") {
+    if (db.filename !== ":memory:") {
+      mkdirSync(dirname(db.filename), { recursive: true });
+    }
+    return knexFactory({ client: db.client, connection: { filename: db.filename }, useNullAsDefault: true });
+  }
+  return knexFactory({
+    client: db.client,
+    connection: { host: db.host, port: db.port, user: db.user, password: db.password, database: db.database },
+  });
+}
+
+/** One in-memory SQLite connection, for tests. */
+export function createMemoryDb(): Knex {
+  return knexFactory({
+    client: "better-sqlite3",
+    connection: { filename: ":memory:" },
+    useNullAsDefault: true,
+    pool: { min: 1, max: 1 },
+  });
+}

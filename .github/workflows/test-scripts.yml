@@ -99,6 +99,20 @@ jobs:
     - name: Test Django tiered setup script (every tier + release builds)
       run: ./tests/test_script.sh setup_django_tiered_project
 
+  test-node-tiered:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Test Node tiered setup script (every tier + release builds)
+      run: ./tests/test_script.sh setup_node_tiered_project
+
   shellcheck:
     runs-on: ubuntu-latest
     

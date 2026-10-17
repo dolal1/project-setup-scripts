@@ -1,0 +1,25 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * One CSRF token per session. Forms include <input type="hidden" name="_csrf" value="<%= csrfToken %>">;
+ * fetch() calls send it as the x-csrf-token header. Unsafe requests without a matching token get 403.
+ */
+export function csrf(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.csrf) {
+    req.session.csrf = randomBytes(32).toString("hex");
+  }
+  res.locals.csrfToken = req.session.csrf;
+
+  if (SAFE_METHODS.has(req.method)) {
+    return next();
+  }
+  const sent = String(req.body?._csrf ?? req.get("x-csrf-token") ?? "");
+  const expected = req.session.csrf;
+  if (sent.length !== expected.length || !timingSafeEqual(Buffer.from(sent), Buffer.from(expected))) {
+    return res.status(403).send("Invalid or missing CSRF token");
+  }
+  next();
+}

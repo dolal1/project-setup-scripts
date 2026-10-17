@@ -1,0 +1,35 @@
+// npm run feature                      list feature switches
+// npm run feature -- <name> --off      switch one off (or --on, --reset)
+import { parseArgs } from "node:util";
+import { createApp } from "../app.js";
+import type { Features } from "../support/features.js";
+
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: { on: { type: "boolean" }, off: { type: "boolean" }, reset: { type: "boolean" } },
+});
+
+const app = await createApp();
+const features: Features = app.locals.features;
+const db = app.locals.db;
+
+try {
+  const name = positionals[0];
+  if (name === undefined) {
+    for (const [feature, on] of await features.snapshot(db)) {
+      console.log(`${feature}\t${on ? "on" : "off"}`);
+    }
+  } else if (!features.defined().includes(name)) {
+    console.error(`'${name}' is not a feature in this build.`);
+    process.exitCode = 1;
+  } else if ([values.on, values.off, values.reset].filter(Boolean).length !== 1) {
+    console.error("Choose exactly one of --on, --off or --reset.");
+    process.exitCode = 1;
+  } else {
+    if (values.reset) await features.reset(db, name);
+    else await features.set(db, name, Boolean(values.on));
+    console.log(`${name}: ${(await features.snapshot(db)).get(name) ? "on" : "off"}`);
+  }
+} finally {
+  await db.destroy();
+}

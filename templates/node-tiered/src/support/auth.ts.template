@@ -1,0 +1,84 @@
+import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { promisify } from "node:util";
+import type { NextFunction, Request, Response } from "express";
+import type { Knex } from "knex";
+import type { CurrentUser, Role } from "./permissions.js";
+
+const scryptAsync = promisify(scrypt) as (password: string, salt: string, length: number) => Promise<Buffer>;
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const hash = await scryptAsync(password, salt, 64);
+  return `scrypt$${salt}$${hash.toString("hex")}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [scheme, salt, hash] = stored.split("$");
+  if (scheme !== "scrypt" || !salt || !hash) {
+    return false;
+  }
+  const expected = Buffer.from(hash, "hex");
+  const actual = await scryptAsync(password, salt, expected.length);
+  return timingSafeEqual(expected, actual);
+}
+
+export async function createUser(db: Knex, username: string, password: string, role: Role): Promise<number> {
+  const [id] = await db("users").insert({ username, password_hash: await hashPassword(password), role, is_active: true });
+  return typeof id === "object" ? (id as { id: number }).id : id;
+}
+
+export async function findLoginUser(db: Knex, username: string, password: string): Promise<CurrentUser | undefined> {
+  const row = await db("users").where({ username, is_active: true }).first();
+  if (!row || !(await verifyPassword(password, row.password_hash))) {
+    return undefined;
+  }
+  return { id: row.id, username: row.username, role: row.role };
+}
+
+/** Puts the logged-in user (if any) on req.user. */
+export function loadUser(db: Knex) {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    const userId = req.session.userId;
+    if (userId !== undefined) {
+      const row = await db("users").where({ id: userId, is_active: true }).first();
+      req.user = row ? { id: row.id, username: row.username, role: row.role } : undefined;
+    }
+    next();
+  };
+}
+
+export function requireLogin(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.redirect("/login");
+  }
+  next();
+}
+
+/** 403 unless the user holds the permission (which also needs its feature on, and to exist in this build). */
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.redirect("/login");
+    }
+    if (!res.locals.can(permission)) {
+      return res.status(403).send("Forbidden");
+    }
+    next();
+  };
+}
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: number;
+    csrf?: string;
+  }
+}
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface Request {
+      user?: CurrentUser;
+    }
+  }
+}

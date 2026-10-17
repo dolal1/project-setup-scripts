@@ -1,0 +1,58 @@
+import { execFileSync } from "node:child_process";
+import { expect, test } from "vitest";
+import { Permissions, Role } from "../src/support/permissions.js";
+import { loginAs, testApp } from "./helpers.js";
+
+const admin = { id: 1, username: "a", role: Role.Admin };
+const staff = { id: 2, username: "s", role: Role.Staff };
+
+test("permissions follow the roles each one lists, and need their feature on", () => {
+  const permissions = new Permissions();
+  permissions.define({
+    "users.manage": { roles: [Role.Admin] },
+    "reports.view": { roles: [Role.Admin, Role.Staff], feature: "reports" },
+  });
+  const on = new Map([["reports", true]]);
+
+  expect(permissions.allows(admin, "users.manage", on)).toBe(true);
+  expect(permissions.allows(staff, "users.manage", on)).toBe(false);
+  expect(permissions.allows(staff, "reports.view", on)).toBe(true);
+  expect(permissions.allows(staff, "reports.view", new Map([["reports", false]]))).toBe(false);
+  expect(permissions.allows(undefined, "reports.view", on)).toBe(false);
+});
+
+test("a permission that was never defined denies", () => {
+  expect(new Permissions().allows(admin, "not-in-this-build.do", new Map())).toBe(false);
+});
+
+test("login, the home page and role checks in views work end to end", async () => {
+  const { app, db } = await testApp();
+
+  const asAdmin = await loginAs(app, db, Role.Admin);
+  expect((await asAdmin.get("/")).text).toContain("You can manage users.");
+
+  const asStaff = await loginAs(app, db, Role.Staff);
+  const home = await asStaff.get("/");
+  expect(home.status).toBe(200);
+  expect(home.text).not.toContain("You can manage users.");
+
+  await db.destroy();
+});
+
+test("unsafe requests without the CSRF token are refused", async () => {
+  const { app, db } = await testApp();
+  const agent = await loginAs(app, db, Role.Admin);
+
+  expect((await agent.post("/logout")).status).toBe(403);
+
+  await db.destroy();
+});
+
+test("the feature command refuses features outside the build", () => {
+  expect(() =>
+    execFileSync("npx", ["tsx", "src/cli/feature.ts", "not-in-this-build", "--on"], {
+      env: { ...process.env, DB_FILENAME: ":memory:" },
+      stdio: "pipe",
+    }),
+  ).toThrow(/not a feature in this build/);
+});

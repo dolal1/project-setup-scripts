@@ -1,0 +1,44 @@
+/**
+ * Roles and permissions, with tier awareness.
+ *
+ * Core defines its permissions in app.ts; each tier module defines its own in register(). A
+ * permission passes only when its feature switch (if any) is defined in this build and on, and the
+ * user's role is listed. A permission nobody defined denies, so checks for tiers missing from a
+ * build are simply false.
+ */
+export enum Role {
+  Admin = "admin",
+  Staff = "staff",
+}
+
+export interface PermissionSpec {
+  roles: Role[];
+  feature?: string;
+}
+
+export interface CurrentUser {
+  id: number;
+  username: string;
+  role: Role;
+}
+
+export class Permissions {
+  private readonly specs = new Map<string, PermissionSpec>();
+
+  define(specs: Record<string, PermissionSpec>): void {
+    for (const [name, spec] of Object.entries(specs)) {
+      this.specs.set(name, spec);
+    }
+  }
+
+  allows(user: CurrentUser | undefined, name: string, features: Map<string, boolean>): boolean {
+    const spec = this.specs.get(name);
+    if (!user || !spec) {
+      return false;
+    }
+    if (spec.feature !== undefined && features.get(spec.feature) !== true) {
+      return false;
+    }
+    return spec.roles.includes(user.role);
+  }
+}

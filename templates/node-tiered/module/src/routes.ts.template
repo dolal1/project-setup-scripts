@@ -1,0 +1,9 @@
+import type { Router } from "express";
+import { requirePermission } from "../../../src/support/auth.js";
+
+// Mounted at /{{MODULE_TIER}}/ only when this module loads, so in a lower-tier build these URLs 404.
+export function routes(router: Router): void {
+  router.get("/example", requirePermission("{{MODULE_TIER}}.example.view"), (_req, res) => {
+    res.render("{{MODULE_TIER}}/example");
+  });
+}

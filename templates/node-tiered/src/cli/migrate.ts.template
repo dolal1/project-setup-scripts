@@ -1,0 +1,7 @@
+// npm run migrate (development) · node dist/src/cli/migrate.js (production)
+// Runs the migrations of core and of every tier module loaded at the active tier.
+import { createApp } from "../app.js";
+
+const app = await createApp({ migrate: true });
+console.log(`Migrated tiers: ${app.locals.modules.loaded().join(", ")}`);
+await app.locals.db.destroy();

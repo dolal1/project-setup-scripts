@@ -1,0 +1,26 @@
+/**
+ * Navigation registry. Modules add their own items in register(), so core never needs to know
+ * which modules exist. Views render a section with <%- include("partials/menu", { section: "main" }) %>.
+ */
+export interface MenuItem {
+  label: string;
+  path: string;
+  permission?: string;
+  order: number;
+}
+
+export class Menu {
+  private readonly items = new Map<string, MenuItem[]>();
+
+  add(section: string, item: Omit<MenuItem, "order"> & { order?: number }): void {
+    const list = this.items.get(section) ?? [];
+    list.push({ order: 100, ...item });
+    this.items.set(section, list);
+  }
+
+  visible(section: string, can: (permission: string) => boolean): MenuItem[] {
+    return (this.items.get(section) ?? [])
+      .filter((item) => item.permission === undefined || can(item.permission))
+      .sort((a, b) => a.order - b.order);
+  }
+}

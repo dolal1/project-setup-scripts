@@ -1,0 +1,22 @@
+/**
+ * Everything the {{MODULE}} tier adds is wired here or lives in this folder, so deleting
+ * modules/{{MODULE_TIER}}/ removes all of it: routes, views, tables, switches, permissions, menu items.
+ * Loaded by src/support/modules.ts when {{PREFIX_UPPER}}_TIER is '{{MODULE_TIER}}' or higher.
+ */
+import type { ModuleContext } from "../../../src/support/modules.js";
+import { Role } from "../../../src/support/permissions.js";
+import { routes } from "./routes.js";
+
+export { migrations } from "./migrations.js";
+
+export const VIEW_EXAMPLE = "{{MODULE_TIER}}.example.view";
+
+export function register({ router, features, permissions, menu }: ModuleContext): void {
+  // On by default. `npm run feature -- {{MODULE_TIER}}.example --off` hides it for a while.
+  features.define("{{MODULE_TIER}}.example");
+  permissions.define({
+    [VIEW_EXAMPLE]: { roles: [Role.Admin], feature: "{{MODULE_TIER}}.example" },
+  });
+  menu.add("main", { label: "{{MODULE}} example", path: "/{{MODULE_TIER}}/example", permission: VIEW_EXAMPLE, order: {{MODULE_ORDER}} });
+  routes(router);
+}

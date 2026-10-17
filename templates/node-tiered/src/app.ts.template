@@ -1,0 +1,111 @@
+import { join } from "node:path";
+import express, { type Express } from "express";
+import session from "express-session";
+import helmet from "helmet";
+import type { Knex } from "knex";
+import { config, TIERS } from "./config/env.js";
+import { APP_ROOT } from "./config/paths.js";
+import { coreMigrations } from "./migrations/core.js";
+import { findLoginUser, loadUser, requireLogin } from "./support/auth.js";
+import { csrf } from "./support/csrf.js";
+import { createDb, migrate } from "./support/db.js";
+import { Features } from "./support/features.js";
+import { Menu } from "./support/menu.js";
+import { Modules } from "./support/modules.js";
+import { Permissions, Role } from "./support/permissions.js";
+import { KnexSessionStore } from "./support/session-store.js";
+
+export interface AppOptions {
+  db?: Knex;
+  tier?: string;
+  /** Run pending migrations on start-up (tests do; production runs `npm run migrate` instead). */
+  migrate?: boolean;
+}
+
+export async function createApp(options: AppOptions = {}): Promise<Express> {
+  const db = options.db ?? createDb();
+  const modules = new Modules(TIERS, options.tier ?? config.tier, join(APP_ROOT, "modules"));
+  for (const warning of modules.warnings) {
+    console.warn(`[modules] ${warning}`);
+  }
+
+  const features = new Features();
+  const permissions = new Permissions();
+  const menu = new Menu();
+
+  // Core ({{CORE_TIER_LABEL}}) permissions; each module defines its own
+  permissions.define({
+    "dashboard.view": { roles: [Role.Admin, Role.Staff] },
+    "users.manage": { roles: [Role.Admin] },
+  });
+
+  const loaded = await modules.load();
+  if (options.migrate) {
+    await migrate(db, [...coreMigrations, ...loaded.flatMap(({ module }) => module.migrations ?? [])]);
+  }
+
+  const app = express();
+  app.locals.db = db;
+  app.locals.modules = modules;
+  app.locals.features = features;
+  app.locals.permissions = permissions;
+  app.locals.menu = menu;
+
+  app.set("view engine", "ejs");
+  app.set("views", [join(APP_ROOT, "views"), ...loaded.map(({ folder }) => join(APP_ROOT, "modules", folder, "views"))]);
+  if (config.production) {
+    app.set("trust proxy", 1);
+  }
+
+  app.use(helmet());
+  app.use(express.urlencoded({ extended: false }));
+  app.use(
+    session({
+      store: new KnexSessionStore(db),
+      secret: config.sessionSecret,
+      resave: false,
+      saveUninitialized: false,
+      cookie: { httpOnly: true, sameSite: "lax", secure: config.production, maxAge: 1000 * 60 * 60 * 8 },
+    }),
+  );
+  app.use(csrf);
+  app.use(loadUser(db));
+  app.use(async (req, res, next) => {
+    const state = await features.snapshot(db);
+    const can = (names: string | string[], { any = false } = {}) => {
+      const list = Array.isArray(names) ? names : [names];
+      const check = (name: string) => permissions.allows(req.user, name, state);
+      return any ? list.some(check) : list.every(check);
+    };
+    res.locals.user = req.user;
+    res.locals.can = can;
+    res.locals.featureOn = (name: string) => state.get(name) === true;
+    res.locals.menu = (section: string) => menu.visible(section, (p) => can(p));
+    next();
+  });
+
+  app.get("/", requireLogin, (_req, res) => res.render("home"));
+  app.get("/login", (_req, res) => res.render("login", { error: null }));
+  app.post("/login", async (req, res, next) => {
+    const user = await findLoginUser(db, String(req.body.username ?? ""), String(req.body.password ?? ""));
+    if (!user) {
+      return res.status(401).render("login", { error: "Wrong username or password." });
+    }
+    req.session.regenerate((err) => {
+      if (err) return next(err);
+      req.session.userId = user.id;
+      req.session.save(() => res.redirect("/"));
+    });
+  });
+  app.post("/logout", (req, res) => req.session.destroy(() => res.redirect("/login")));
+
+  // Each loaded module's routes live under /<tier>/. A module missing from the build has no URLs.
+  for (const { tier, module } of loaded) {
+    const router = express.Router();
+    module.register({ tier, router, features, permissions, menu });
+    app.use(`/${tier}`, router);
+  }
+
+  app.use((_req, res) => res.status(404).send("Not found"));
+  return app;
+}

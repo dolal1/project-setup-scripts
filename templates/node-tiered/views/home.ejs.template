@@ -1,0 +1,4 @@
+<%- include("partials/header") %>
+<h1>Welcome, <%= user.username %></h1>
+<% if (can("users.manage")) { %><p>You can manage users.</p><% } %>
+<%- include("partials/footer") %>

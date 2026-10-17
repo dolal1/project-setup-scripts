@@ -1,0 +1,56 @@
+/**
+ * Runs at every tier (CI runs the suite once per tier): below {{MODULE_TIER}} the module is inactive and
+ * must leave no trace; at or above it, it must work.
+ */
+import { afterEach, expect, test } from "vitest";
+import type { Knex } from "knex";
+import { Role } from "../../../src/support/permissions.js";
+import { loginAs, testApp } from "../../../test/helpers.js";
+
+const URL = "/{{MODULE_TIER}}/example";
+let db: Knex;
+
+afterEach(async () => {
+  await db?.destroy();
+});
+
+test("example page and table follow the active tier", async () => {
+  const setup = await testApp();
+  db = setup.db;
+  const active = setup.app.locals.modules.has("{{MODULE_TIER}}");
+
+  const response = await (await loginAs(setup.app, db, Role.Admin)).get(URL);
+
+  if (active) {
+    expect(response.status).toBe(200);
+    expect(response.text).toContain("{{MODULE}} example");
+  } else {
+    expect(response.status).toBe(404);
+  }
+  expect(await db.schema.hasTable("{{MODULE_TIER}}_examples")).toBe(active);
+});
+
+test("roles and the feature switch control access", async (context) => {
+  const setup = await testApp();
+  db = setup.db;
+  if (!setup.app.locals.modules.has("{{MODULE_TIER}}")) {
+    context.skip("{{MODULE}} is not active at this tier.");
+  }
+
+  expect((await (await loginAs(setup.app, db, Role.Staff)).get(URL)).status).toBe(403);
+
+  await setup.app.locals.features.set(db, "{{MODULE_TIER}}.example", false);
+  expect((await (await loginAs(setup.app, db, Role.Admin)).get(URL)).status).toBe(403);
+});
+
+test("menu item appears only for allowed users", async () => {
+  const setup = await testApp();
+  db = setup.db;
+  const active = setup.app.locals.modules.has("{{MODULE_TIER}}");
+
+  const adminHome = (await (await loginAs(setup.app, db, Role.Admin)).get("/")).text;
+  const staffHome = (await (await loginAs(setup.app, db, Role.Staff)).get("/")).text;
+
+  expect(adminHome.includes("{{MODULE}} example")).toBe(active);
+  expect(staffHome).not.toContain("{{MODULE}} example");
+});
