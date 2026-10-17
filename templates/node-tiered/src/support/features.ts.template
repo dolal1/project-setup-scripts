@@ -1,0 +1,44 @@
+import type { Knex } from "knex";
+
+/**
+ * Feature switches, defined by the tier modules that are in this build.
+ *
+ * Each module defines its switches in register() with a default (on). Turning one off or on stores
+ * a row in the `features` table; resetting deletes the row so the default applies again. A switch
+ * nobody defined is always off: switches turn delivered features off for a while, they never
+ * unlock a tier that isn't in the build.
+ *
+ *   npm run feature                       list switches
+ *   npm run feature -- <name> --off       switch one off (or --on, --reset)
+ */
+export class Features {
+  private readonly defaults = new Map<string, boolean>();
+
+  define(name: string, defaultOn = true): void {
+    this.defaults.set(name, defaultOn);
+  }
+
+  defined(): string[] {
+    return [...this.defaults.keys()].sort();
+  }
+
+  /** Every defined switch's current state; read once per request. */
+  async snapshot(db: Knex): Promise<Map<string, boolean>> {
+    const state = new Map(this.defaults);
+    const rows = await db("features").select("name", "active");
+    for (const row of rows) {
+      if (state.has(row.name)) {
+        state.set(row.name, Boolean(row.active));
+      }
+    }
+    return state;
+  }
+
+  async set(db: Knex, name: string, active: boolean): Promise<void> {
+    await db("features").insert({ name, active }).onConflict("name").merge();
+  }
+
+  async reset(db: Knex, name: string): Promise<void> {
+    await db("features").where({ name }).delete();
+  }
+}

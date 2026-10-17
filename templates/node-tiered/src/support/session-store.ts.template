@@ -1,0 +1,40 @@
+import session from "express-session";
+import type { Knex } from "knex";
+
+/**
+ * Sessions in the app's own database (the `sessions` table), so logins survive restarts and work
+ * on hosts that run several processes. express-session's default MemoryStore does neither.
+ */
+export class KnexSessionStore extends session.Store {
+  constructor(
+    private readonly db: Knex,
+    private readonly ttlMs = 1000 * 60 * 60 * 8,
+  ) {
+    super();
+  }
+
+  override get(sid: string, callback: (err: unknown, session?: session.SessionData | null) => void): void {
+    this.db("sessions")
+      .where({ sid })
+      .andWhere("expires_at", ">", Date.now())
+      .first()
+      .then((row) => callback(null, row ? JSON.parse(row.data) : null), callback);
+  }
+
+  override set(sid: string, data: session.SessionData, callback?: (err?: unknown) => void): void {
+    const expires = data.cookie?.expires ? new Date(data.cookie.expires).getTime() : Date.now() + this.ttlMs;
+    this.db("sessions")
+      .insert({ sid, data: JSON.stringify(data), expires_at: expires })
+      .onConflict("sid")
+      .merge()
+      .then(() => callback?.(), callback);
+  }
+
+  override destroy(sid: string, callback?: (err?: unknown) => void): void {
+    this.db("sessions").where({ sid }).delete().then(() => callback?.(), callback);
+  }
+
+  override touch(sid: string, data: session.SessionData, callback?: () => void): void {
+    this.set(sid, data, () => callback?.());
+  }
+}

@@ -1,0 +1,45 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { expect, test } from "vitest";
+import { Modules } from "../src/support/modules.js";
+
+function fixture(modules: Record<string, string[]>): string {
+  const dir = mkdtempSync(join(tmpdir(), "modules-test-"));
+  for (const [tier, requires] of Object.entries(modules)) {
+    mkdirSync(join(dir, tier));
+    writeFileSync(join(dir, tier, "module.json"), JSON.stringify({ tier, requires, entry: "src/index" }));
+  }
+  return dir;
+}
+
+test("loads modules up to the active tier", () => {
+  const modules = new Modules(["one", "two", "three"], "two", fixture({ two: [], three: ["two"] }));
+
+  expect(modules.folders()).toEqual(["two"]);
+  expect(modules.loaded()).toEqual(["one", "two"]);
+  expect(modules.has("three")).toBe(false);
+  expect(modules.warnings).toEqual([]);
+});
+
+test("a missing module is skipped with a warning", () => {
+  const modules = new Modules(["one", "two", "three"], "three", fixture({ two: [] }));
+
+  expect(modules.folders()).toEqual(["two"]);
+  expect(modules.warnings).toHaveLength(1);
+});
+
+test("a module whose requirement did not load is skipped", () => {
+  const modules = new Modules(["one", "two", "three"], "three", fixture({ three: ["two"] }));
+
+  expect(modules.folders()).toEqual([]);
+  expect(modules.loaded()).toEqual(["one"]);
+  expect(modules.warnings).toHaveLength(2);
+});
+
+test("an unknown tier loads core only", () => {
+  const modules = new Modules(["one", "two"], "gold", fixture({ two: [] }));
+
+  expect(modules.folders()).toEqual([]);
+  expect(modules.warnings).toHaveLength(1);
+});

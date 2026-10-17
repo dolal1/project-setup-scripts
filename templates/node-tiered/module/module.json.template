@@ -1,0 +1,5 @@
+{
+  "tier": "{{MODULE_TIER}}",
+  "requires": [{{MODULE_REQUIRES_JSON}}],
+  "entry": "src/index"
+}

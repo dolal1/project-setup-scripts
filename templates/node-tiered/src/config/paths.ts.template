@@ -1,0 +1,9 @@
+import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Where the running code lives: the project root under tsx/vitest, or dist/ after `npm run build`
+export const RUNTIME_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+// The project root, where package.json, views/ and modules/*/module.json are
+export const APP_ROOT = basename(RUNTIME_ROOT) === "dist" ? dirname(RUNTIME_ROOT) : RUNTIME_ROOT;
+// Extension of compiled-or-source files at runtime, for importing module entry points
+export const RUNTIME_EXT = import.meta.url.endsWith(".ts") ? ".ts" : ".js";

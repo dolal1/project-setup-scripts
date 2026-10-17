@@ -1,0 +1,27 @@
+import type { Express } from "express";
+import type { Knex } from "knex";
+import request from "supertest";
+import { createApp } from "../src/app.js";
+import { createUser } from "../src/support/auth.js";
+import { createMemoryDb } from "../src/support/db.js";
+import type { Role } from "../src/support/permissions.js";
+
+/** A fresh app on its own in-memory database, at the tier in {{PREFIX_UPPER}}_TIER (CI runs once per tier). */
+export async function testApp(): Promise<{ app: Express; db: Knex }> {
+  const db = createMemoryDb();
+  const app = await createApp({ db, migrate: true });
+  return { app, db };
+}
+
+let users = 0;
+
+/** A supertest agent logged in as a new user with the given role. */
+export async function loginAs(app: Express, db: Knex, role: Role) {
+  const username = `${role}-${++users}`;
+  await createUser(db, username, "a-long-test-password", role);
+  const agent = request.agent(app);
+  const page = await agent.get("/login");
+  const token = /name="_csrf" value="([^"]+)"/.exec(page.text)?.[1];
+  await agent.post("/login").type("form").send({ username, password: "a-long-test-password", _csrf: token }).expect(302);
+  return agent;
+}

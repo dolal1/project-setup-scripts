@@ -1,0 +1,9 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["test/**/*.test.ts", "modules/*/test/**/*.test.ts"],
+    // An empty modules/ (a core-only release) must not fail the run
+    passWithNoTests: true,
+  },
+});

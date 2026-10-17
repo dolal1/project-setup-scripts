@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Node.js hooks for scripts/build-release.sh, which sources this file.
+# Contract: docs/tiered-modules.md in project-setup-scripts.
+
+# modules/standard for tier "standard"
+stack_module_dir() {
+    printf 'modules/%s\n' "$1"
+}
+
+# Patterns that must not appear once a module is gone: its folder and its view folder
+stack_leak_patterns() {
+    printf '%s\n' "modules/$1\\b" "['\"]$1/"
+}
+
+stack_install_dev() {
+    npm ci --no-audit --no-fund
+}
+
+stack_test() {
+    npm test
+}
+
+# Compile to dist/, then keep only production dependencies: the zip runs with `npm start`
+stack_install_prod() {
+    npm run build
+    npm ci --omit=dev --no-audit --no-fund
+    rm -rf data .env
+}

@@ -104,17 +104,21 @@ also ask before `scripts/build-release.sh` runs, since a release is something a 
 
 | Concept | Laravel | Django | Node.js (Express + TS) |
 | --- | --- | --- | --- |
-| Module folder | `modules/Standard/` (PSR-4 `Modules\Standard\`) | `modules/standard/` (Django app) | `modules/standard/` (npm workspace) |
-| Manifest | `module.php` | `module.py` (`TIER`, `REQUIRES`, `APP`) | `module.json` |
-| Loader | `App\Support\Modules` registers providers | settings build `INSTALLED_APPS` and URLs from modules on disk | `loadModules()` mounts routers from modules on disk |
-| Feature switches | Laravel Pennant | `core.features` registry, overrides stored as django-waffle switches | `features` table and service |
-| Permissions | `Permission` enum → Gates, `<x-can>` | `Permission` enum → `User.has_perm`, Django `can` template tag | `Permission` enum → `can()` middleware and view helper |
-| Arch test | PHPUnit scan for `Modules\` | pytest scan for `modules` imports, tier URL namespaces and template folders | vitest scan for `modules/` imports |
-| Scaffolder | `setup_laravel_tiered_project.sh` | `setup_django_tiered_project.sh` | `setup_node_tiered_project.sh` (planned) |
+| Module folder | `modules/Standard/` (PSR-4 `Modules\Standard\`) | `modules/standard/` (Django app) | `modules/standard/` (plain folder; one `package.json`) |
+| Manifest | `module.php` | `module.py` (`TIER`, `REQUIRES`, `APP`) | `module.json` (`tier`, `requires`, `entry`) |
+| Loader | `App\Support\Modules` registers providers | settings build `INSTALLED_APPS` and URLs from modules on disk | `Modules` in `src/support/modules.ts` imports each entry and mounts its router at `/<tier>` |
+| Feature switches | Laravel Pennant | `core.features` registry, overrides stored as django-waffle switches | `Features` registry, overrides in a `features` table |
+| Permissions | `Permission` enum → Gates, `<x-can>` | `Permission` enum → `User.has_perm`, Django `can` template tag | `Permissions` registry → `requirePermission()` and a `can()` view helper |
+| Arch test | PHPUnit scan for `Modules\` | pytest scan for `modules` imports, tier URL namespaces and template folders | vitest scan for `modules/` imports and tier view folders |
+| Scaffolder | `setup_laravel_tiered_project.sh` | `setup_django_tiered_project.sh` | `setup_node_tiered_project.sh` |
 
 **Django note:** a Django superuser normally passes every permission check. The generated
 `User.has_perm` keeps tier permissions to feature + role even for superusers, lets Django's own
 model permissions (`core.change_user`, used by the admin) work as usual, and denies anything else.
+
+**Node note:** each module exports its migrations as plain objects, and core hands only the
+loaded modules' migrations to Knex, so a lower-tier database never gets higher-tier tables.
+Sessions are stored in the app's database and forms carry a CSRF token.
 
 Shared shell helpers for the scaffolders are in `scripts/common/tiered.sh`. Run
 `./tests/test_tiered_common.sh` to check the helpers and the release builder against a stub stack.

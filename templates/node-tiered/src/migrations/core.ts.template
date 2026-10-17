@@ -1,0 +1,39 @@
+import type { Migration } from "../support/db.js";
+
+/** Core ({{CORE_TIER_LABEL}}) tables. Each tier module exports its own migrations. */
+export const coreMigrations: Migration[] = [
+  {
+    name: "0001_core_users",
+    async up(db) {
+      await db.schema.createTable("users", (t) => {
+        t.increments("id");
+        t.string("username", 150).notNullable().unique();
+        t.string("password_hash").notNullable();
+        t.string("role", 32).notNullable().defaultTo("staff");
+        t.boolean("is_active").notNullable().defaultTo(true);
+        t.timestamps(true, true);
+      });
+    },
+    async down(db) {
+      await db.schema.dropTable("users");
+    },
+  },
+  {
+    name: "0002_core_features_and_sessions",
+    async up(db) {
+      await db.schema.createTable("features", (t) => {
+        t.string("name").primary();
+        t.boolean("active").notNullable();
+      });
+      await db.schema.createTable("sessions", (t) => {
+        t.string("sid").primary();
+        t.text("data").notNullable();
+        t.bigInteger("expires_at").notNullable().index();
+      });
+    },
+    async down(db) {
+      await db.schema.dropTable("sessions");
+      await db.schema.dropTable("features");
+    },
+  },
+];
