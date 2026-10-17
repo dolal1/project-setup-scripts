@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Providers;
+
+use App\Enums\Permission;
+use App\Support\Menu;
+use App\Support\Modules;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Pennant\Feature;
+
+/**
+ * Loads the tier modules for config('{{PREFIX}}.tier') and sets up the hooks they plug into.
+ */
+class ModulesServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $modules = new Modules(
+            config('{{PREFIX}}.tiers'),
+            (string) config('{{PREFIX}}.tier'),
+            base_path('modules'),
+        );
+
+        $this->app->instance(Modules::class, $modules);
+        $this->app->singleton(Menu::class);
+
+        foreach ($modules->providers() as $provider) {
+            $this->app->register($provider);
+        }
+    }
+
+    public function boot(Modules $modules): void
+    {
+        // Feature switches are app-wide, not per user
+        Feature::resolveScopeUsing(fn () => null);
+
+        Permission::register();
+
+        foreach ($modules->warnings() as $warning) {
+            Log::warning($warning);
+        }
+    }
+}

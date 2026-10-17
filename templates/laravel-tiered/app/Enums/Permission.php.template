@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Enums;
+
+use App\Support\Permissions\PermissionContract;
+use App\Support\Permissions\RegistersPermissions;
+
+/**
+ * Core ({{CORE_TIER_LABEL}}) permissions. Each module has its own Permission enum for its tier.
+ */
+enum Permission: string implements PermissionContract
+{
+    use RegistersPermissions;
+
+    case ViewDashboard = 'dashboard.view';
+    case ManageUsers = 'users.manage';
+
+    public function roles(): array
+    {
+        return match ($this) {
+            self::ViewDashboard => [Role::Admin, Role::Staff],
+            self::ManageUsers => [Role::Admin],
+        };
+    }
+
+    public function feature(): ?string
+    {
+        return null;
+    }
+}

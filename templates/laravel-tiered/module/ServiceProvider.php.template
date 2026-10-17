@@ -1,0 +1,28 @@
+<?php
+
+namespace Modules\{{MODULE}};
+
+use App\Support\Menu;
+use Illuminate\Support\ServiceProvider;
+use Laravel\Pennant\Feature;
+
+/**
+ * Everything the {{MODULE}} tier adds is wired here, so deleting modules/{{MODULE}}/ removes
+ * all of it: routes, views, migrations, feature switches, permissions and menu items.
+ */
+class {{MODULE}}ServiceProvider extends ServiceProvider
+{
+    public function boot(Menu $menu): void
+    {
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+        $this->loadViewsFrom(__DIR__.'/resources/views', '{{MODULE_TIER}}');
+        $this->loadMigrationsFrom(__DIR__.'/database/migrations');
+
+        // On by default. `php artisan {{PREFIX}}:feature {{MODULE_TIER}}.example --off` hides it for a while.
+        Feature::define('{{MODULE_TIER}}.example', fn () => true);
+
+        Permission::register();
+
+        $menu->add('main', '{{MODULE}} example', '{{MODULE_TIER}}.example', Permission::ViewExample->value, order: {{MODULE_ORDER}});
+    }
+}

@@ -1,0 +1,30 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Active tier
+    |--------------------------------------------------------------------------
+    |
+    | Modules at or below this tier load, if their folder is in this build.
+    | Development defaults to the top tier. A client release writes the
+    | client's tier into .env.example (scripts/build-release.sh).
+    |
+    */
+
+    'tier' => env('{{PREFIX_UPPER}}_TIER', '{{TOP_TIER}}'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tiers
+    |--------------------------------------------------------------------------
+    |
+    | Every tier, lowest first. The first is core and lives in app/. Each
+    | later tier is a module in modules/<Tier>/ with its own module.php.
+    |
+    */
+
+    'tiers' => [{{TIERS_PHP}}],
+
+];

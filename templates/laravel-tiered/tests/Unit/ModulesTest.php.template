@@ -1,0 +1,80 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Support\Modules;
+use PHPUnit\Framework\TestCase;
+
+class ModulesTest extends TestCase
+{
+    private string $path;
+
+    protected function setUp(): void
+    {
+        $this->path = sys_get_temp_dir().'/modules-test-'.uniqid();
+        mkdir($this->path);
+    }
+
+    protected function tearDown(): void
+    {
+        foreach (glob($this->path.'/*/module.php') as $file) {
+            unlink($file);
+            rmdir(dirname($file));
+        }
+        rmdir($this->path);
+    }
+
+    private function module(string $tier, array $requires = []): void
+    {
+        mkdir("{$this->path}/{$tier}");
+        file_put_contents("{$this->path}/{$tier}/module.php", '<?php return '.var_export([
+            'tier' => $tier, 'requires' => $requires, 'provider' => "Provider\\{$tier}",
+        ], true).';');
+    }
+
+    public function test_loads_modules_up_to_the_active_tier(): void
+    {
+        $this->module('two');
+        $this->module('three', ['two']);
+
+        $modules = new Modules(['one', 'two', 'three'], 'two', $this->path);
+
+        $this->assertSame(['Provider\\two'], $modules->providers());
+        $this->assertSame(['one', 'two'], $modules->loaded());
+        $this->assertFalse($modules->has('three'));
+        $this->assertSame([], $modules->warnings());
+    }
+
+    public function test_a_missing_module_is_skipped_with_a_warning(): void
+    {
+        $this->module('two');
+
+        $modules = new Modules(['one', 'two', 'three'], 'three', $this->path);
+
+        $this->assertSame(['Provider\\two'], $modules->providers());
+        $this->assertSame(['one', 'two'], $modules->loaded());
+        $this->assertCount(1, $modules->warnings());
+    }
+
+    public function test_a_module_whose_requirement_did_not_load_is_skipped(): void
+    {
+        $this->module('three', ['two']);
+
+        $modules = new Modules(['one', 'two', 'three'], 'three', $this->path);
+
+        $this->assertSame([], $modules->providers());
+        $this->assertSame(['one'], $modules->loaded());
+        $this->assertCount(2, $modules->warnings());
+    }
+
+    public function test_an_unknown_tier_loads_core_only(): void
+    {
+        $this->module('two');
+
+        $modules = new Modules(['one', 'two'], 'gold', $this->path);
+
+        $this->assertSame([], $modules->providers());
+        $this->assertSame(['one'], $modules->loaded());
+        $this->assertCount(1, $modules->warnings());
+    }
+}

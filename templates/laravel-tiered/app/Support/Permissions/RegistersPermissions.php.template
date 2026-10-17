@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Support\Permissions;
+
+use App\Models\User;
+use Illuminate\Support\Facades\Gate;
+use Laravel\Pennant\Feature;
+
+/**
+ * Gives a Permission enum one Gate per case. A Gate passes only when the permission's feature
+ * (if any) is defined in this build and switched on, and the user's role is listed.
+ *
+ * A Gate that was never defined denies, so permissions of modules missing from a build are
+ * simply false: @can, <x-can> and can: middleware need no special cases.
+ */
+trait RegistersPermissions
+{
+    public static function register(): void
+    {
+        foreach (self::cases() as $permission) {
+            Gate::define($permission->value, fn (User $user): bool => $permission->allows($user));
+        }
+    }
+
+    public function allows(User $user): bool
+    {
+        $feature = $this->feature();
+        if ($feature !== null && ! (in_array($feature, Feature::defined(), true) && Feature::active($feature))) {
+            return false;
+        }
+
+        return in_array($user->role, $this->roles(), true);
+    }
+}

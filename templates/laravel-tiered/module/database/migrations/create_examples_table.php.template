@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+// Only runs when the {{MODULE}} module loads, so a lower-tier client's database never has this table.
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('{{MODULE_TIER}}_examples', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('{{MODULE_TIER}}_examples');
+    }
+};

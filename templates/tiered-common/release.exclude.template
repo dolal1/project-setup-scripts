@@ -11,4 +11,6 @@ CLAUDE.md
 scripts/build-release.sh
 scripts/release-stack.sh
 scripts/propose-commit.sh
+scripts/render-agreement.py
 release.exclude
+# Add other internal paths of this project below.

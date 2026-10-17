@@ -63,7 +63,14 @@ chmod +x "$SCRIPT_PATH"
 
 # Run the script with test inputs
 echo "Running script with automated inputs..."
-echo -e "${TEST_PROJECT_NAME}\n${TEST_PROJECT_NAME}-venv" | "$SCRIPT_PATH"
+case "$SCRIPT_NAME" in
+    setup_*_tiered_project)
+        "$SCRIPT_PATH" "$TEST_PROJECT_NAME" --prefix demo --tiers basic,standard,premium < /dev/null
+        ;;
+    *)
+        echo -e "${TEST_PROJECT_NAME}\n${TEST_PROJECT_NAME}-venv" | "$SCRIPT_PATH"
+        ;;
+esac
 
 # Verify project was created
 if [ ! -d "$TEST_PROJECT_NAME" ]; then
@@ -164,6 +171,54 @@ case "$SCRIPT_NAME" in
         fi
         
         print_success "All Django TypeScript checks passed"
+        ;;
+    "setup_laravel_tiered_project")
+        echo "Running Laravel tiered specific checks..."
+
+        for f in config/demo.php app/Support/Modules.php app/View/Components/Can.php \
+            modules/Standard/module.php modules/Premium/module.php tests/Feature/ArchTest.php \
+            scripts/build-release.sh scripts/release-stack.sh release.exclude .github/workflows/ci.yml; do
+            if [ ! -f "$f" ]; then
+                print_error "Expected file not found: $f"
+                exit 1
+            fi
+        done
+        if grep -qE '\{\{[A-Z_]+\}\}' config/demo.php modules/*/module.php .github/workflows/ci.yml AGENTS.md; then
+            print_error "Unfilled {{PLACEHOLDER}} left in generated files"
+            exit 1
+        fi
+        print_success "Tier modules, components and release tooling generated"
+
+        if ! php -m | grep -qi '^pdo_sqlite$'; then
+            print_warning "PHP has no pdo_sqlite; skipping the tier test runs and release builds"
+        else
+            for tier in basic standard premium; do
+                DEMO_TIER=$tier php artisan test
+            done
+            print_success "Test suite passes at every tier"
+
+            export GIT_AUTHOR_NAME="Test" GIT_AUTHOR_EMAIL="test@example.com"
+            export GIT_COMMITTER_NAME="Test" GIT_COMMITTER_EMAIL="test@example.com"
+            git add -A
+            git commit -qm "test fixture"
+            for tier in basic standard; do
+                RELEASE_OUT="$TEST_DIR/releases-$$" scripts/build-release.sh "$tier" 1.0.0
+                unzip -q -o "$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-$tier.zip" -d "$TEST_DIR/releases-$$"
+            done
+            release="$TEST_DIR/releases-$$/$TEST_PROJECT_NAME-1.0.0-basic"
+            if [ -e "$release/modules/Standard" ] || [ -e "$release/AGENTS.md" ] || [ -e "$release/.github" ]; then
+                print_error "Basic release still contains a higher tier or internal files"
+                exit 1
+            fi
+            if grep -rIlE --exclude-dir=vendor 'Modules\\(Standard|Premium)\\' "$release"; then
+                print_error "Basic release still references Standard or Premium code"
+                exit 1
+            fi
+            rm -rf "$TEST_DIR/releases-$$"
+            print_success "Lower-tier releases build, pass their own tests and contain no higher tier"
+        fi
+
+        print_success "All Laravel tiered checks passed"
         ;;
     *)
         print_warning "No specific tests for script: $SCRIPT_NAME"

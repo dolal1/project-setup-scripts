@@ -1,0 +1,9 @@
+@if ($items !== [])
+<nav class="menu menu-{{ $section }}">
+    <ul>
+        @foreach ($items as $item)
+            <li><a href="{{ route($item['route']) }}" @class(['active' => request()->routeIs($item['route'])])>{{ $item['label'] }}</a></li>
+        @endforeach
+    </ul>
+</nav>
+@endif

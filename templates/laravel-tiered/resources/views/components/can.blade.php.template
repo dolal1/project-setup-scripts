@@ -1,0 +1,7 @@
+@if ($passes())
+{{ $slot }}
+@elseif (isset($else))
+{{ $else }}
+@elseif ($upgrade)
+<span class="upgrade-hint">Available in {{ $upgrade }}</span>
+@endif

@@ -74,10 +74,11 @@ studly() {
     printf '%s' "${1^}"
 }
 
-# tiers_json: the TIERS array as a JSON list, for CI matrices
+# tiers_json [tier ...]: the given tiers (default: the TIERS array) as a JSON list, for CI matrices
 tiers_json() {
     local out="" tier
-    for tier in "${TIERS[@]}"; do
+    (( $# )) || set -- "${TIERS[@]}"
+    for tier in "$@"; do
         out+="${out:+, }\"$tier\""
     done
     printf '[%s]' "$out"
@@ -113,13 +114,13 @@ parse_tiered_args() {
     done
 
     if [[ -z "$TARGET_DIR" ]]; then
-        read -r -p "Project directory (e.g. my-app): " TARGET_DIR
+        read -r -p "Project directory (e.g. my-app): " TARGET_DIR || true
     fi
     if [[ -z "$PREFIX" ]]; then
-        read -r -p "Tier prefix (e.g. salon gives SALON_TIER): " PREFIX
+        read -r -p "Tier prefix (e.g. salon gives SALON_TIER): " PREFIX || true
     fi
     if [[ -z "$tiers_raw" ]]; then
-        read -r -p "Tiers, lowest first (default: basic,standard,premium): " tiers_raw
+        read -r -p "Tiers, lowest first (default: basic,standard,premium): " tiers_raw || true
     fi
     tiers_raw="${tiers_raw:-basic,standard,premium}"
 

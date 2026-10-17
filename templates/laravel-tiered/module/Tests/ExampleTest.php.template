@@ -1,0 +1,68 @@
+<?php
+
+namespace Modules\{{MODULE}}\Tests;
+
+use App\Enums\Role;
+use App\Models\User;
+use App\Support\Modules;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Pennant\Feature;
+use Tests\TestCase;
+
+/**
+ * Runs at every tier (CI runs the suite once per tier): below {{MODULE_TIER}} the module is
+ * inactive and must leave no trace; at or above it, it must work.
+ */
+class ExampleTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function active(): bool
+    {
+        return app(Modules::class)->has('{{MODULE_TIER}}');
+    }
+
+    public function test_example_page_and_table_follow_the_active_tier(): void
+    {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        $response = $this->actingAs($admin)->get('/{{MODULE_TIER}}/example');
+
+        if ($this->active()) {
+            $response->assertOk()->assertSee('{{MODULE}} example');
+            $this->assertTrue(Schema::hasTable('{{MODULE_TIER}}_examples'));
+        } else {
+            $response->assertNotFound();
+            $this->assertFalse(Schema::hasTable('{{MODULE_TIER}}_examples'));
+        }
+    }
+
+    public function test_roles_and_the_feature_switch_control_access(): void
+    {
+        if (! $this->active()) {
+            $this->markTestSkipped('{{MODULE}} is not active at this tier.');
+        }
+
+        $admin = User::factory()->create(['role' => Role::Admin]);
+        $staff = User::factory()->create(['role' => Role::Staff]);
+
+        $this->actingAs($staff)->get('/{{MODULE_TIER}}/example')->assertForbidden();
+
+        Feature::deactivate('{{MODULE_TIER}}.example');
+        $this->actingAs($admin)->get('/{{MODULE_TIER}}/example')->assertForbidden();
+    }
+
+    public function test_menu_item_appears_only_for_allowed_users(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+        $adminMenu = Blade::render('<x-menu section="main" />');
+
+        $this->actingAs(User::factory()->create(['role' => Role::Staff]));
+        $staffMenu = Blade::render('<x-menu section="main" />');
+
+        $this->assertSame($this->active(), str_contains($adminMenu, '{{MODULE}} example'));
+        $this->assertStringNotContainsString('{{MODULE}} example', $staffMenu);
+    }
+}
